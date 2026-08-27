@@ -4,36 +4,18 @@
  */
 
 import React, { useState } from 'react';
+import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
 import LandingCarousel from '../components/LandingCarousel.jsx';
 import DemoOverlayModal from '../components/DemoOverlayModal.jsx';
 import {
-  Sparkles, ArrowRight, ShieldCheck, User, Zap, Bot,
+  Sparkles, ArrowRight, ShieldCheck, User, Zap, Bot, AlertTriangle,
   MessageSquare, BarChart3, CheckCircle2, ChevronDown, ChevronUp,
-  Layers, Lock, Mail, Star, Play, Globe, Cpu, Headphones, X, UserPlus, LogIn
+  Layers, Lock, Mail, Star, Play, Globe, Cpu, Headphones, X, UserPlus, LogIn, Info
 } from 'lucide-react';
+import { getRegisteredUsers, saveRegisteredUser } from './LoginPage.jsx';
 
-const DEMO_CREDENTIALS = {
-  user: { email: 'user@gmail.com', password: 'user123', role: 'user' },
-  admin: { email: 'admin@gmail.com', password: 'admin123', role: 'admin' },
-};
-
-function getRegisteredUsers() {
-  try {
-    const raw = localStorage.getItem('resolv_registered_users');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRegisteredUser(userObj) {
-  const users = getRegisteredUsers();
-  users.push(userObj);
-  localStorage.setItem('resolv_registered_users', JSON.stringify(users));
-}
-
-function GoogleIcon({ className = "w-4 h-4" }) {
+function GoogleIcon({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24">
       <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
@@ -44,30 +26,60 @@ function GoogleIcon({ className = "w-4 h-4" }) {
   );
 }
 
+
+const DEMO_CREDENTIALS = {
+  user: { email: 'user@gmail.com', password: 'user123', role: 'user' },
+  admin: { email: 'admin@gmail.com', password: 'admin123', role: 'admin' },
+};
+
+
+
 export default function LandingPage({ onLogin }) {
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [authTab, setAuthTab] = useState('login'); // 'login' | 'register'
-  const [showGooglePicker, setShowGooglePicker] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  const [authTab, setAuthTab] = useState('login');
   const [showDemoOverlay, setShowDemoOverlay] = useState(false);
   const [initialOverlayScenario, setInitialOverlayScenario] = useState('ai-triage');
-  
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Register form state
+  // Register form state (end-user only)
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regRole, setRegRole] = useState('user');
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
 
+  // Google OAuth state
+  const [googleError, setGoogleError] = useState('');
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (codeResponse) => {
+      try {
+        const res  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${codeResponse.access_token}` },
+        });
+        const info = await res.json();
+        const googleEmail = (info.email || '').toLowerCase();
+        const googleName  = info.name   || googleEmail.split('@')[0];
+        saveRegisteredUser({ name: googleName, email: googleEmail, password: '', role: 'user', provider: 'google', createdAt: new Date().toISOString() });
+        onLogin('user', googleEmail);
+        setShowLoginModal(false);
+      } catch {
+        setGoogleError('Google sign-in failed. Please try again.');
+      }
+    },
+    onError: () => setGoogleError('Google sign-in was cancelled or failed.'),
+    flow: 'implicit',
+  });
+
   // FAQ Accordion state
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+
 
   const handleQuickLogin = (type) => {
     const cred = DEMO_CREDENTIALS[type];
@@ -106,14 +118,7 @@ export default function LandingPage({ onLogin }) {
       return;
     }
 
-    // 3. Fallback: if user provided any email & password, allow them to log in as user
-    if (emailTrim.includes('@') && loginPassword.length >= 3) {
-      onLogin('user', emailTrim);
-      setLoginLoading(false);
-      return;
-    }
-
-    setLoginError('Invalid credentials. Click "Create Account" tab to register.');
+    setLoginError('Invalid credentials. If you are an employee, use the credentials provided by your administrator.');
     setLoginLoading(false);
   };
 
@@ -131,8 +136,8 @@ export default function LandingPage({ onLogin }) {
       return;
     }
 
-    if (regPassword.length < 3) {
-      setRegError('Password must be at least 3 characters.');
+    if (regPassword.length < 6) {
+      setRegError('Password must be at least 6 characters.');
       return;
     }
 
@@ -148,17 +153,18 @@ export default function LandingPage({ onLogin }) {
       return;
     }
 
+    // Registration always creates an end-user account
     const newUser = {
       name: regName.trim(),
       email: emailTrim,
       password: regPassword,
-      role: regRole,
+      role: 'user',
       createdAt: new Date().toISOString(),
     };
 
     saveRegisteredUser(newUser);
     setRegLoading(false);
-    onLogin(regRole, emailTrim);
+    onLogin('user', emailTrim);
   };
 
   const openOverlayWithScenario = (scenarioId) => {
@@ -506,15 +512,31 @@ export default function LandingPage({ onLogin }) {
               </button>
             </div>
 
-            {/* ── Google OAuth Button ───────────────────────────────────── */}
-            <button
-              type="button"
-              onClick={() => setShowGooglePicker(true)}
-              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-black font-semibold text-xs transition-all shadow-md active:scale-95 mb-4"
-            >
-              <GoogleIcon className="w-4 h-4" />
-              Continue with Google
-            </button>
+            {/* ── Google OAuth Button ── */}
+            {googleClientId ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setGoogleError(''); googleLogin(); }}
+                  className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-semibold text-xs transition-all shadow-md active:scale-95 mb-3"
+                >
+                  <GoogleIcon className="w-4 h-4" />
+                  Continue with Google
+                </button>
+                {googleError && (
+                  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 text-red-400 text-[10px] mb-3">
+                    <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />{googleError}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-start gap-2 bg-neutral-800/40 border border-neutral-700/40 rounded-xl px-3 py-2 mb-3">
+                <Info className="w-3 h-3 text-neutral-600 flex-shrink-0 mt-0.5" />
+                <p className="text-[9px] text-neutral-600 leading-relaxed">
+                  Google sign-in available once <code className="bg-neutral-800 px-0.5 rounded">VITE_GOOGLE_CLIENT_ID</code> is configured.
+                </p>
+              </div>
+            )}
 
             {/* Quick Demo Buttons */}
             <div className="grid grid-cols-2 gap-3 mb-6">
@@ -541,6 +563,7 @@ export default function LandingPage({ onLogin }) {
               <div className="flex-1 h-px bg-[#222222]" />
               <span className="text-[10px] text-neutral-500 font-mono uppercase">
                 {authTab === 'login' ? 'Or Enter Credentials' : 'Fill Registration Details'}
+
               </span>
               <div className="flex-1 h-px bg-[#222222]" />
             </div>
@@ -548,6 +571,13 @@ export default function LandingPage({ onLogin }) {
             {/* TAB 1: SIGN IN FORM */}
             {authTab === 'login' ? (
               <form onSubmit={handleFormLogin} className="space-y-3.5">
+                <div className="flex items-start gap-2 bg-blue-500/8 border border-blue-500/20 rounded-xl px-3 py-2">
+                  <Info className="w-3 h-3 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-blue-300/80 leading-relaxed">
+                    <span className="font-semibold text-blue-300">Employees:</span> use credentials set by your admin.
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-neutral-400 mb-1">Email Address</label>
                   <input
@@ -587,8 +617,15 @@ export default function LandingPage({ onLogin }) {
                 </button>
               </form>
             ) : (
-              /* TAB 2: CREATE ACCOUNT / REGISTER FORM */
+              /* TAB 2: CREATE ACCOUNT / REGISTER FORM (End-Users only) */
               <form onSubmit={handleFormRegister} className="space-y-3">
+                <div className="flex items-start gap-2 bg-[#22c55e]/8 border border-[#22c55e]/20 rounded-xl px-3 py-2">
+                  <Info className="w-3 h-3 text-[#22c55e] flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-[#22c55e]/80 leading-relaxed">
+                    For <span className="font-semibold">Support Users</span> only. Employees are added by admins.
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-neutral-400 mb-1">Full Name *</label>
                   <input
@@ -606,7 +643,7 @@ export default function LandingPage({ onLogin }) {
                   <input
                     type="email"
                     required
-                    placeholder="john@company.com"
+                    placeholder="john@example.com"
                     value={regEmail}
                     onChange={e => setRegEmail(e.target.value)}
                     className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
@@ -614,43 +651,16 @@ export default function LandingPage({ onLogin }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1">Password *</label>
+                  <label className="block text-xs font-medium text-neutral-400 mb-1">Password * (min 6 chars)</label>
                   <input
                     type="password"
                     required
+                    minLength={6}
                     placeholder="••••••••"
                     value={regPassword}
                     onChange={e => setRegPassword(e.target.value)}
                     className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1">Account Role</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRegRole('user')}
-                      className={`py-2 px-3 rounded-lg text-xs font-semibold border transition-all ${
-                        regRole === 'user'
-                          ? 'bg-[#22c55e]/15 border-[#22c55e]/50 text-[#22c55e]'
-                          : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                      }`}
-                    >
-                      User (Portal)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRegRole('admin')}
-                      className={`py-2 px-3 rounded-lg text-xs font-semibold border transition-all ${
-                        regRole === 'admin'
-                          ? 'bg-blue-500/15 border-blue-500/50 text-blue-400'
-                          : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                      }`}
-                    >
-                      Admin (Dashboard)
-                    </button>
-                  </div>
                 </div>
 
                 {regError && (
@@ -664,7 +674,7 @@ export default function LandingPage({ onLogin }) {
                   disabled={regLoading}
                   className="w-full py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold text-xs transition-all active:scale-95 disabled:opacity-50 mt-2 shadow-lg shadow-[#22c55e]/20"
                 >
-                  {regLoading ? 'Creating Account...' : 'Complete Registration'}
+                  {regLoading ? 'Creating Account...' : 'Create My Account'}
                 </button>
               </form>
             )}
@@ -674,91 +684,7 @@ export default function LandingPage({ onLogin }) {
         </div>
       )}
 
-      {/* ── Google OAuth Sign-In Modal ────────────────────────────── */}
-      {showGooglePicker && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowGooglePicker(false)}>
-          <div className="bg-[#141414] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-white/10 border border-white/20">
-                  <GoogleIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">Google OAuth Authentication</h3>
-                  <p className="text-xs text-neutral-400">Sign in with your Google Account</p>
-                </div>
-              </div>
-              <button onClick={() => setShowGooglePicker(false)} className="text-neutral-400 hover:text-white text-sm">✕</button>
-            </div>
 
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const targetEmail = customGoogleEmail.trim();
-              if (targetEmail.includes('@')) {
-                onLogin(regRole || 'user', targetEmail.toLowerCase());
-                setShowGooglePicker(false);
-                setShowLoginModal(false);
-              }
-            }} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  Google Account Email *
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="your.name@gmail.com"
-                    value={customGoogleEmail}
-                    onChange={e => setCustomGoogleEmail(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-neutral-700 focus:outline-none focus:border-[#4285F4]/60"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  Access Portal Role
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('user')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                      regRole === 'user'
-                        ? 'bg-[#22c55e]/15 border-[#22c55e]/50 text-[#22c55e]'
-                        : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                    }`}
-                  >
-                    Support User
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('admin')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                      regRole === 'admin'
-                        ? 'bg-blue-500/15 border-blue-500/50 text-blue-400'
-                        : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                    }`}
-                  >
-                    System Admin
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!customGoogleEmail.includes('@')}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold text-xs transition-all active:scale-[0.98] disabled:opacity-40 shadow-lg shadow-[#4285F4]/20 mt-3"
-              >
-                <GoogleIcon className="w-4 h-4" />
-                Sign In with Google Account
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   );

@@ -1,35 +1,22 @@
 /**
- * LoginPage.jsx — Login & Registration gate for AI Ticketing System
+ * LoginPage.jsx — Login & Registration gate for ResolvAI
+ *
+ * Access Rules:
+ *   - End-User  : Self-registers here → Support Portal
+ *   - Employee  : Account created by Admin in Employee Directory → logs in here
+ *   - Admin     : Pre-seeded demo credential only → Admin Dashboard
  */
 
 import React, { useState } from 'react';
+import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
 import {
-  CircleDot, Mail, Lock, Eye, EyeOff, Sparkles,
-  User, ShieldCheck, AlertTriangle, ArrowRight, Zap, UserPlus, LogIn
+  Mail, Lock, Eye, EyeOff, Sparkles,
+  User, ShieldCheck, AlertTriangle, Zap, UserPlus, LogIn, Info
 } from 'lucide-react';
 
-const DEMO_CREDENTIALS = {
-  user: { email: 'user@gmail.com', password: 'user123', role: 'user' },
-  admin: { email: 'admin@gmail.com', password: 'admin123', role: 'admin' },
-};
-
-function getRegisteredUsers() {
-  try {
-    const raw = localStorage.getItem('resolv_registered_users');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRegisteredUser(userObj) {
-  const users = getRegisteredUsers();
-  users.push(userObj);
-  localStorage.setItem('resolv_registered_users', JSON.stringify(users));
-}
-
-function GoogleIcon({ className = "w-4 h-4" }) {
+// Google icon SVG component
+function GoogleIcon({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24">
       <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
@@ -40,65 +27,141 @@ function GoogleIcon({ className = "w-4 h-4" }) {
   );
 }
 
-export default function LoginPage({ onLogin }) {
-  const [authTab, setAuthTab] = useState('login'); // 'login' | 'register'
-  const [showGooglePicker, setShowGooglePicker] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
-  
-  // Login form state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+// ── Demo credentials (pre-seeded) ─────────────────────────────────────────────
+const DEMO_CREDENTIALS = {
+  user:  { email: 'user@gmail.com',  password: 'user123',  role: 'user'  },
+  admin: { email: 'admin@gmail.com', password: 'admin123', role: 'admin' },
+};
 
-  // Registration state
-  const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
+// ── LocalStorage helpers (shared with EmployeeDirectory) ─────────────────────
+export function getRegisteredUsers() {
+  try {
+    const raw = localStorage.getItem('resolv_registered_users');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRegisteredUser(userObj) {
+  const users = getRegisteredUsers();
+  const existing = users.findIndex(u => u.email.toLowerCase() === userObj.email.toLowerCase());
+  if (existing >= 0) {
+    users[existing] = userObj; // update if already exists
+  } else {
+    users.push(userObj);
+  }
+  localStorage.setItem('resolv_registered_users', JSON.stringify(users));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function LoginPage({ onLogin }) {
+  const [authTab, setAuthTab] = useState('login');
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+  // Login form
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError]           = useState('');
+  const [loading, setLoading]       = useState(false);
+
+  // Registration form (end-user only)
+  const [regName, setRegName]         = useState('');
+  const [regEmail, setRegEmail]       = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regRole, setRegRole] = useState('user');
-  const [regError, setRegError] = useState('');
-  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError]       = useState('');
+  const [regLoading, setRegLoading]   = useState(false);
+
+  // ── Google OAuth ────────────────────────────────────────────────────────────
+  const [googleError, setGoogleError] = useState('');
+
+  const handleGoogleSuccess = (tokenResponse) => {
+    setGoogleError('');
+    // Decode the JWT id_token to get user info
+    try {
+      const base64Url = tokenResponse.credential || '';
+      const base64 = base64Url.split('.')[1];
+      const payload = JSON.parse(atob(base64));
+      const googleEmail = (payload.email || '').toLowerCase();
+      const googleName  = payload.name  || googleEmail.split('@')[0];
+
+      // Create / update the user entry in localStorage
+      saveRegisteredUser({
+        name:      googleName,
+        email:     googleEmail,
+        password:  '',          // no password for OAuth users
+        role:      'user',
+        provider:  'google',
+        createdAt: new Date().toISOString(),
+      });
+      onLogin('user', googleEmail);
+    } catch {
+      setGoogleError('Could not read Google account info. Please try email login.');
+    }
+  };
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (codeResponse) => {
+      try {
+        // Fetch user info from Google
+        const res  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${codeResponse.access_token}` },
+        });
+        const info = await res.json();
+        const googleEmail = (info.email || '').toLowerCase();
+        const googleName  = info.name   || googleEmail.split('@')[0];
+
+        saveRegisteredUser({
+          name:      googleName,
+          email:     googleEmail,
+          password:  '',
+          role:      'user',
+          provider:  'google',
+          createdAt: new Date().toISOString(),
+        });
+        onLogin('user', googleEmail);
+      } catch {
+        setGoogleError('Google sign-in failed. Please try again.');
+      }
+    },
+    onError: () => setGoogleError('Google sign-in was cancelled or failed.'),
+    flow: 'implicit',
+  });
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     await new Promise(r => setTimeout(r, 400));
+
     const emailTrim = email.trim().toLowerCase();
 
-    // 1. Check demo credentials
+    // 1. Demo credentials
     const demoMatch = Object.values(DEMO_CREDENTIALS).find(
       c => c.email === emailTrim && c.password === password
     );
-
     if (demoMatch) {
       onLogin(demoMatch.role, demoMatch.email);
       setLoading(false);
       return;
     }
 
-    // 2. Check registered users
+    // 2. Registered users (end-users self-registered + employees added by Admin)
     const registered = getRegisteredUsers();
     const regMatch = registered.find(
       u => u.email.toLowerCase() === emailTrim && u.password === password
     );
-
     if (regMatch) {
       onLogin(regMatch.role, regMatch.email);
       setLoading(false);
       return;
     }
 
-    // 3. Fallback: allow any valid email + password
-    if (emailTrim.includes('@') && password.length >= 3) {
-      onLogin('user', emailTrim);
-      setLoading(false);
-      return;
-    }
-
-    setError('Invalid credentials. Click "Create Account" tab to register.');
+    setError('Invalid credentials. If you are an employee, use the credentials provided by your administrator.');
     setLoading(false);
   };
 
@@ -110,14 +173,12 @@ export default function LoginPage({ onLogin }) {
       setRegError('Please enter your full name.');
       return;
     }
-
     if (!regEmail.trim().includes('@')) {
       setRegError('Please enter a valid email address.');
       return;
     }
-
-    if (regPassword.length < 3) {
-      setRegError('Password must be at least 3 characters.');
+    if (regPassword.length < 6) {
+      setRegError('Password must be at least 6 characters.');
       return;
     }
 
@@ -133,17 +194,18 @@ export default function LoginPage({ onLogin }) {
       return;
     }
 
+    // Registration always creates an end-user account
     const newUser = {
-      name: regName.trim(),
-      email: emailTrim,
-      password: regPassword,
-      role: regRole,
+      name:      regName.trim(),
+      email:     emailTrim,
+      password:  regPassword,
+      role:      'user',
       createdAt: new Date().toISOString(),
     };
 
     saveRegisteredUser(newUser);
     setRegLoading(false);
-    onLogin(regRole, emailTrim);
+    onLogin('user', emailTrim);
   };
 
   const quickLogin = async (type) => {
@@ -157,10 +219,12 @@ export default function LoginPage({ onLogin }) {
     setLoading(false);
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
 
-      {/* Background glow effects */}
+      {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#22c55e]/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/4 rounded-full blur-[100px]" />
@@ -177,9 +241,9 @@ export default function LoginPage({ onLogin }) {
 
         {/* Card */}
         <div className="bg-[#111111] border border-[#222222] rounded-2xl p-8 shadow-2xl">
-          
+
           {/* Tab Switcher */}
-          <div className="flex bg-[#161616] p-1 rounded-xl border border-[#2a2a2a] mb-6">
+          <div className="flex bg-[#161616] p-1 rounded-xl border border-[#2a2a2a] mb-5">
             <button
               onClick={() => { setAuthTab('login'); setError(''); }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
@@ -202,26 +266,50 @@ export default function LoginPage({ onLogin }) {
             </button>
           </div>
 
-          {/* ── Google OAuth Button ───────────────────────────────────── */}
-          <button
-            type="button"
-            onClick={() => setShowGooglePicker(true)}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-black font-semibold text-sm transition-all shadow-md active:scale-[0.98] mb-4"
-          >
-            <GoogleIcon className="w-4 h-4" />
-            Continue with Google
-          </button>
-
-          <div className="relative flex items-center justify-center mb-5">
-            <div className="border-t border-[#2a2a2a] w-full" />
-            <span className="bg-[#111111] px-3 text-[10px] text-neutral-500 font-medium uppercase tracking-wider absolute">
-              Or with email credentials
-            </span>
-          </div>
+          {/* ── Google OAuth Button ─────────────────────────────────────── */}
+          {googleClientId ? (
+            <>
+              <button
+                type="button"
+                onClick={() => { setGoogleError(''); googleLogin(); }}
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-semibold text-sm transition-all shadow-md active:scale-[0.98] mb-4"
+              >
+                <GoogleIcon className="w-4 h-4" />
+                Continue with Google
+              </button>
+              {googleError && (
+                <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 text-red-400 text-xs mb-3">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />{googleError}
+                </div>
+              )}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex-1 h-px bg-[#2a2a2a]" />
+                <span className="text-[10px] text-neutral-600 uppercase tracking-wider font-medium">or with email</span>
+                <div className="flex-1 h-px bg-[#2a2a2a]" />
+              </div>
+            </>
+          ) : (
+            <div className="flex items-start gap-2 bg-neutral-800/40 border border-neutral-700/40 rounded-xl px-3 py-2.5 mb-5">
+              <Info className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] text-neutral-500 leading-relaxed">
+                Google OAuth not configured. Set <code className="bg-neutral-800 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> in <code className="bg-neutral-800 px-1 rounded">frontend/.env</code> to enable.
+              </p>
+            </div>
+          )}
 
           {authTab === 'login' ? (
             /* ── SIGN IN FORM ── */
             <form onSubmit={handleLogin} className="space-y-4">
+
+              {/* Employee info note */}
+              <div className="flex items-start gap-2 bg-blue-500/8 border border-blue-500/20 rounded-xl px-3 py-2.5">
+                <Info className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-blue-300/80 leading-relaxed">
+                  <span className="font-semibold text-blue-300">Employees:</span> use the credentials provided by your administrator.
+                  <span className="text-neutral-500 ml-1">Admins: use pre-seeded admin credentials below.</span>
+                </p>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
                   Email Address
@@ -266,8 +354,8 @@ export default function LoginPage({ onLogin }) {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 text-red-400 text-sm">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 text-red-400 text-xs">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   {error}
                 </div>
               )}
@@ -281,9 +369,20 @@ export default function LoginPage({ onLogin }) {
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
+
           ) : (
-            /* ── REGISTER FORM ── */
+            /* ── REGISTER FORM (End-Users only) ── */
             <form onSubmit={handleRegister} className="space-y-3.5">
+
+              {/* Registration scope notice */}
+              <div className="flex items-start gap-2 bg-[#22c55e]/8 border border-[#22c55e]/20 rounded-xl px-3 py-2.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-[#22c55e]/80 leading-relaxed">
+                  Registration is for <span className="font-semibold text-[#22c55e]">Support Users</span> (customers) only.
+                  Employees &amp; Admins are added by the system administrator.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1 uppercase tracking-wider">Full Name *</label>
                 <input
@@ -301,7 +400,7 @@ export default function LoginPage({ onLogin }) {
                 <input
                   type="email"
                   required
-                  placeholder="john@company.com"
+                  placeholder="john@example.com"
                   value={regEmail}
                   onChange={e => setRegEmail(e.target.value)}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
@@ -313,44 +412,17 @@ export default function LoginPage({ onLogin }) {
                 <input
                   type="password"
                   required
-                  placeholder="••••••••"
+                  minLength={6}
+                  placeholder="••••••••  (min 6 chars)"
                   value={regPassword}
                   onChange={e => setRegPassword(e.target.value)}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1 uppercase tracking-wider">Account Role</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('user')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                      regRole === 'user'
-                        ? 'bg-[#22c55e]/15 border-[#22c55e]/50 text-[#22c55e]'
-                        : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                    }`}
-                  >
-                    User (Portal)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('admin')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                      regRole === 'admin'
-                        ? 'bg-blue-500/15 border-blue-500/50 text-blue-400'
-                        : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                    }`}
-                  >
-                    Admin (Dashboard)
-                  </button>
-                </div>
-              </div>
-
               {regError && (
-                <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 text-red-400 text-sm">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 text-red-400 text-xs">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   {regError}
                 </div>
               )}
@@ -360,12 +432,12 @@ export default function LoginPage({ onLogin }) {
                 disabled={regLoading}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 shadow-lg shadow-[#22c55e]/20 mt-2"
               >
-                {regLoading ? 'Creating Account...' : 'Complete Registration'}
+                {regLoading ? 'Creating Account...' : 'Create My Account'}
               </button>
             </form>
           )}
 
-          {/* Divider */}
+          {/* Quick Demo Access */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-[#222222]" />
             <span className="text-xs text-neutral-600 font-medium flex items-center gap-1.5">
@@ -374,7 +446,6 @@ export default function LoginPage({ onLogin }) {
             <div className="flex-1 h-px bg-[#222222]" />
           </div>
 
-          {/* Demo buttons */}
           <div className="grid grid-cols-2 gap-3">
             <button
               id="demo-user-btn"
@@ -408,93 +479,7 @@ export default function LoginPage({ onLogin }) {
           </div>
 
         </div>
-
       </div>
-
-      {/* ── Google OAuth Sign-In Modal ────────────────────────────── */}
-      {showGooglePicker && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowGooglePicker(false)}>
-          <div className="bg-[#141414] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-white/10 border border-white/20">
-                  <GoogleIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">Google OAuth Authentication</h3>
-                  <p className="text-xs text-neutral-400">Sign in with your Google Account</p>
-                </div>
-              </div>
-              <button onClick={() => setShowGooglePicker(false)} className="text-neutral-400 hover:text-white text-sm">✕</button>
-            </div>
-
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const targetEmail = customGoogleEmail.trim();
-              if (targetEmail.includes('@')) {
-                onLogin(regRole || 'user', targetEmail.toLowerCase());
-                setShowGooglePicker(false);
-              }
-            }} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  Google Account Email *
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="your.name@gmail.com"
-                    value={customGoogleEmail}
-                    onChange={e => setCustomGoogleEmail(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-neutral-700 focus:outline-none focus:border-[#4285F4]/60"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  Access Portal Role
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('user')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                      regRole === 'user'
-                        ? 'bg-[#22c55e]/15 border-[#22c55e]/50 text-[#22c55e]'
-                        : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                    }`}
-                  >
-                    Support User
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('admin')}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                      regRole === 'admin'
-                        ? 'bg-blue-500/15 border-blue-500/50 text-blue-400'
-                        : 'bg-[#0f0f0f] border-[#2a2a2a] text-neutral-400'
-                    }`}
-                  >
-                    System Admin
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!customGoogleEmail.includes('@')}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold text-xs transition-all active:scale-[0.98] disabled:opacity-40 shadow-lg shadow-[#4285F4]/20 mt-3"
-              >
-                <GoogleIcon className="w-4 h-4" />
-                Sign In with Google Account
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -10,13 +10,15 @@ import {
   ExternalLink, Ticket, AlertCircle
 } from 'lucide-react';
 import { employeeApi } from '../api.js';
+import { saveRegisteredUser } from './LoginPage.jsx';
 
 const DEPARTMENTS = ['Engineering', 'DevOps', 'IT', 'HR', 'Finance', 'Product', 'Legal', 'Marketing'];
 const AVAILABILITY = ['Available', 'Busy', 'On Leave'];
 
 const emptyForm = {
   name: '', email: '', department: 'Engineering', role: '',
-  skill_tags: '', avg_resolution_time: 0, current_ticket_load: 0, availability: 'Available'
+  skill_tags: '', avg_resolution_time: 0, current_ticket_load: 0,
+  availability: 'Available', login_password: ''
 };
 
 export default function EmployeeDirectory() {
@@ -62,11 +64,26 @@ export default function EmployeeDirectory() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Destructure login_password out before sending to API
+      const { login_password, ...apiForm } = form;
       if (editingId) {
-        await employeeApi.update(editingId, form);
+        await employeeApi.update(editingId, apiForm);
       } else {
-        await employeeApi.create(form);
+        await employeeApi.create(apiForm);
       }
+
+      // Save/update employee login credentials in localStorage so they can sign in
+      if (form.email && login_password) {
+        saveRegisteredUser({
+          name:      form.name,
+          email:     form.email.toLowerCase(),
+          password:  login_password,
+          role:      'user',   // employees log in as user-role (portal view)
+          isEmployee: true,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
       setShowForm(false);
       setEditingId(null);
       setForm({ ...emptyForm });
@@ -210,6 +227,15 @@ export default function EmployeeDirectory() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
+
+              {/* Admin info note */}
+              <div className="flex items-start gap-2.5 bg-blue-500/8 border border-blue-500/20 rounded-xl px-3.5 py-2.5">
+                <AlertCircle className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-blue-300/80 leading-relaxed">
+                  Set a <span className="font-semibold text-blue-300">login password</span> for this employee.
+                  They will use their email + this password to sign in to the Support Portal.
+                </p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Name *</label>
@@ -252,6 +278,22 @@ export default function EmployeeDirectory() {
                   </select>
                 </div>
               </div>
+
+              {/* Login password set by admin */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">
+                  Login Password {editingId ? '(leave blank to keep existing)' : '*'}
+                </label>
+                <input
+                  type="password"
+                  required={!editingId}
+                  placeholder={editingId ? "Leave blank to keep current password" : "Set employee login password"}
+                  value={form.login_password}
+                  onChange={e => setForm({...form, login_password: e.target.value})}
+                  className="input-field text-sm py-2"
+                />
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="btn-primary flex-1 flex items-center justify-center gap-2">
                   <Check className="w-4 h-4" /> {editingId ? 'Update' : 'Add Employee'}

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import {
   Headphones, ListTodo, Users, BarChart3,
   Menu, CircleDot, LogOut, User, ShieldCheck, FileText, Settings
@@ -221,6 +222,7 @@ function clearAuth() {
 
 export default function App() {
   const [auth, setAuth] = useState(() => loadAuth());
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   const handleLogin = (role, email) => {
     saveAuth(role, email);
@@ -232,43 +234,43 @@ export default function App() {
     setAuth(null);
   };
 
-  // Not logged in → show Landing Page
-  if (!auth) {
+  const content = !auth ? (
+    <Router>
+      <LandingPage onLogin={handleLogin} />
+    </Router>
+  ) : (() => {
+    const { role, email } = auth;
+    const isAdmin = role === 'admin';
     return (
       <Router>
-        <LandingPage onLogin={handleLogin} />
+        <Layout role={role} email={email} onLogout={handleLogout}>
+          <Routes>
+            {isAdmin ? (
+              /* ── Admin routes ── */
+              <>
+                <Route path="/tickets" element={<TicketList />} />
+                <Route path="/tickets/:id" element={<TicketDetail />} />
+                <Route path="/employees" element={<EmployeeDirectory />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="*" element={<Navigate to="/tickets" replace />} />
+              </>
+            ) : (
+              /* ── User routes ── */
+              <>
+                <Route path="/" element={<UserPortal userEmail={email} />} />
+                <Route path="/my-tickets" element={<UserPortal userEmail={email} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </>
+            )}
+          </Routes>
+        </Layout>
       </Router>
     );
-  }
-
-  const { role, email } = auth;
-  const isAdmin = role === 'admin';
+  })();
 
   return (
-    <Router>
-      <Layout role={role} email={email} onLogout={handleLogout}>
-        <Routes>
-          {isAdmin ? (
-            /* ── Admin routes ── */
-            <>
-              <Route path="/tickets" element={<TicketList />} />
-              <Route path="/tickets/:id" element={<TicketDetail />} />
-              <Route path="/employees" element={<EmployeeDirectory />} />
-              <Route path="/analytics" element={<Analytics />} />
-              {/* Catch-all → redirect admin to ticket management */}
-              <Route path="*" element={<Navigate to="/tickets" replace />} />
-            </>
-          ) : (
-            /* ── User routes ── */
-            <>
-              <Route path="/" element={<UserPortal userEmail={email} />} />
-              <Route path="/my-tickets" element={<UserPortal userEmail={email} />} />
-              {/* Catch-all → redirect user to portal */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </>
-          )}
-        </Routes>
-      </Layout>
-    </Router>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      {content}
+    </GoogleOAuthProvider>
   );
 }

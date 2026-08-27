@@ -8,9 +8,9 @@
 
 ```
                                   +---------------------------------------+
-                                  |         Web Frontend (React 18)       |
-                                  | (Landing, User Portal, Admin Dashboard|
-                                  |     Settings Modal, Google OAuth)     |
+                                   |         Web Frontend (React 18)       |
+                                   | (Landing, User Portal, Admin Dashboard|
+                                   |    Settings Modal, Role-Based Auth)   |
                                   +-------------------+-------------------+
                                                       |
                                           HTTP REST / WebSocket
@@ -49,9 +49,12 @@
 
 ```mermaid
 graph TD
-    A[User Visits ResolvAI] --> B[Sign in via Email/Pwd or Google OAuth]
-    B --> C[Open User Portal]
-    C --> D[Submit Ticket Title & Natural Language Description]
+    A[User Visits ResolvAI] --> B[Chooses: Sign In or Create Account]
+    B --> REG[New User: Self-Register with Name + Email + Password]
+    B --> LOGIN[Returning User: Sign In with Email + Password]
+    REG --> C[Open User Portal]
+    LOGIN --> C
+    C --> D[Submit Ticket with Natural Language Description]
     D --> E[AI Evaluates Category, Severity & User Sentiment]
     E --> F{Is Ticket Eligible for AI Auto-Resolution?}
     F -- Yes --> G[Display Instant Step-by-Step AI Solution]
@@ -59,15 +62,16 @@ graph TD
     H -- Unhelpful --> I[Escalate & Re-assign to Senior Human Support Engineer]
     F -- No --> J[Routing Engine Assigns Ticket to Department & Employee]
     J --> K[User Tracks Status & SLA in 'My Tickets']
-    K --> L[Receive Live Agent Replies & WebSockets Notifications]
+    K --> L[Receive Live Agent Replies & WebSocket Notifications]
 ```
 
 **Step-by-step User Experience**:
-1. **Authentication**: Sign in using Email/Password, **Google OAuth ("Continue with Google")**, or Demo User quick-login.
-2. **Submit Ticket**: Fill in the title and describe the issue in plain text.
-3. **Instant AI Analysis**: The LLM automatically extracts category (`Access`, `Billing`, `Server`, `DB`, `HR`, `Bug`, `Feature`), severity rating, and sentiment.
-4. **Auto-Resolution Check**: Common requests (password reset steps, leave policies, duplicate billing) receive instant resolution instructions.
-5. **Real-time Updates**: Track assigned employee status, active SLA countdowns, and chat directly with support agents.
+1. **Registration**: New users **self-register** with Full Name, Email, and Password on the Sign In / Create Account page. Registration always creates an **End-User** (Support Portal) account.
+2. **Login**: Returning users sign in with their email and password. Demo accounts available for quick access.
+3. **Submit Ticket**: Fill in the issue description in plain text.
+4. **Instant AI Analysis**: The LLM automatically extracts category (`Access`, `Billing`, `Server`, `DB`, `HR`, `Bug`, `Feature`), severity rating, and sentiment.
+5. **Auto-Resolution Check**: Common requests (password reset steps, leave policies, duplicate billing) receive instant resolution instructions.
+6. **Real-time Updates**: Track assigned employee status, active SLA countdowns, and chat directly with support agents.
 
 ---
 
@@ -75,21 +79,26 @@ graph TD
 
 ```mermaid
 graph TD
-    A2[Employee Logs In] --> B2[View Assigned Tickets in Ticket Management List]
-    B2 --> C2[Check Real-Time SLA Countdown Badges: Breached / At Risk / On Track]
-    C2 --> D2[Open Ticket Detail View]
-    D2 --> E2[Inspect AI Triage: Category, Severity, Sentiment & Suggested Steps]
-    E2 --> F2[Click '✨ Generate AI Reply' for 1-Click Contextual Draft]
-    F2 --> G2[Review, Edit & Send Response to Customer]
-    G2 --> H2[Add Internal Staff Notes for Team Collaboration]
-    H2 --> I2[Update Ticket Status to In Progress / Resolved / Closed]
+    A2[Employee Receives Login Credentials from Admin] --> B2[Sign In at Login Page with Admin-Set Email & Password]
+    B2 --> C2[Land on User Portal - Support Portal View]
+    C2 --> D2[Admin assigns tickets to employee via Ticket Management]
+    D2 --> E2[Employee sees assigned tickets in the admin view]
+    E2 --> F2[Check Real-Time SLA Countdown Badges: Breached / At Risk / On Track]
+    F2 --> G2[Open Ticket Detail View]
+    G2 --> H2[Inspect AI Triage: Category, Severity, Sentiment & Suggested Steps]
+    H2 --> I2[Click '✨ Generate AI Reply' for 1-Click Contextual Draft]
+    I2 --> J2[Review, Edit & Send Response to Customer]
+    J2 --> K2[Add Internal Staff Notes for Team Collaboration]
+    K2 --> L2[Update Ticket Status to In Progress / Resolved / Closed]
 ```
 
 **Step-by-step Support Employee Experience**:
-1. **Work Queue Inspection**: View incoming tickets assigned based on skill matching and current workload.
-2. **SLA Countdown & Urgency**: Monitor color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
-3. **AI Smart Reply Assistant**: Click **"✨ Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
-4. **Customer Communication & Notes**: Publish replies, attach internal team notes, and manage ticket status (`In Progress`, `Pending Info`, `Resolved`, `Closed`).
+1. **Account Creation**: Accounts are **created by the System Admin** in the Employee Directory. The admin sets the employee's email and login password.
+2. **Login**: Employee signs in using the email and password set by the admin — from the same login page, using the **Sign In** tab.
+3. **Work Queue Inspection**: View incoming tickets assigned based on skill matching and current workload.
+4. **SLA Countdown & Urgency**: Monitor color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
+5. **AI Smart Reply Assistant**: Click **"✨ Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
+6. **Customer Communication & Notes**: Publish replies, attach internal team notes, and manage ticket status (`In Progress`, `Pending Info`, `Resolved`, `Closed`).
 
 ---
 
@@ -97,21 +106,24 @@ graph TD
 
 ```mermaid
 graph TD
-    A3[System Admin Logs In] --> B3[Access Full System Overview & Control Panel]
-    B3 --> C3[Manage Employee Directory: Skills, Workload & Availability]
-    C3 --> D3[Configure Web UI Settings: Groq API Key & Slack Webhooks]
-    D3 --> E3[Test Slack Alert Card Connection with 1-Click]
-    E3 --> F3[Monitor High-Priority & SLA Breached Tickets Across All Departments]
-    F3 --> G3[Export Filtered Ticket Dataset via '📥 Export CSV']
-    G3 --> H3[View Executive Analytics: Department Load, Category Breakdown & Performance]
-    H3 --> I3[1-Click Demo Reset to Restore Test Scenario Tickets]
+    A3[System Admin Logs In with Pre-seeded Admin Credentials] --> B3[Access Full System Overview & Control Panel]
+    B3 --> C3[Open Employee Directory]
+    C3 --> D3[Add New Employee: Set Name, Email, Department, Skills & Login Password]
+    D3 --> E3[Employee can now Sign In using Admin-set credentials]
+    B3 --> F3[Configure Web UI Settings: Groq API Key & Slack Webhooks]
+    F3 --> G3[Test Slack Alert Card Connection with 1-Click]
+    B3 --> H3[Monitor High-Priority & SLA Breached Tickets Across All Departments]
+    H3 --> I3[Export Filtered Ticket Dataset via '📥 Export CSV']
+    H3 --> J3[View Executive Analytics: Department Load, Category Breakdown & Performance]
+    B3 --> K3[1-Click Demo Reset to Restore Test Scenario Tickets]
 ```
 
 **Step-by-step System Admin Experience**:
-1. **Global Oversight**: Track tickets across all departments (Engineering, DevOps, IT, HR, Finance, Legal, Product).
-2. **Employee Directory Management**: Add/edit support staff, update skill tags, set availability (`Available`, `Busy`, `On Leave`), and balance ticket workloads.
-3. **Web UI Settings & Integrations**: In-browser configuration of Groq API Keys, LLM models, and Slack Webhooks with 1-click connection testing.
-4. **Data Reporting & Analytics**: Export filtered tickets into CSV spreadsheets and review Recharts metrics for SLA compliance and department trends.
+1. **Login**: Admin uses the pre-seeded demo credentials (`admin@gmail.com` / `admin123`) — there is no admin self-registration.
+2. **Employee Management**: Add support staff by filling in their Name, Email, Department, Skills, and **Login Password**. Employees then log in with those admin-set credentials.
+3. **Global Oversight**: Track tickets across all departments (Engineering, DevOps, IT, HR, Finance, Legal, Product).
+4. **Web UI Settings & Integrations**: In-browser configuration of Groq API Keys, LLM models, and Slack Webhooks with 1-click connection testing.
+5. **Data Reporting & Analytics**: Export filtered tickets into CSV spreadsheets and review Recharts metrics for SLA compliance and department trends.
 
 ---
 
@@ -127,7 +139,7 @@ graph TD
 | **AI / LLM Engine** | Groq (`llama-3.3-70b-versatile`) | Ultra-fast LLM inference with smart offline fallback mode |
 | **Real-time Engine** | WebSockets (`/ws`) | Live updates for tickets, chat replies, and system notifications |
 | **Notifications** | Slack Incoming Webhooks | Rich alert cards dispatched on urgent tickets or SLA escalations |
-| **Auth & Identity** | Client Auth + Google OAuth | Email/Password, Google OAuth ("Continue with Google"), 1-click Demo quick-login |
+| **Auth & Identity** | Email + Password (localStorage) | Self-registration for End-Users; Employee accounts set by Admin; Admin via pre-seeded credentials |
 
 ---
 
