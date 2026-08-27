@@ -43,23 +43,23 @@
 
 ---
 
-## 🔄 User & Admin System Workflows
+## 🔄 User, Employee & Admin System Workflows
 
-### 👤 1. End-User Flow (Ticket Creation & Auto-Resolution)
+### 👤 1. End-User Flow (Ticket Creator / Customer)
 
 ```mermaid
 graph TD
-    A[User Visits Platform] --> B[Sign in via Email/Password or Google OAuth]
-    B --> C[Navigate to User Portal]
+    A[User Visits ResolvAI] --> B[Sign in via Email/Pwd or Google OAuth]
+    B --> C[Open User Portal]
     C --> D[Submit Ticket Title & Natural Language Description]
     D --> E[AI Evaluates Category, Severity & User Sentiment]
     E --> F{Is Ticket Eligible for AI Auto-Resolution?}
-    F -- Yes --> G[Present Instant Step-by-Step AI Solution]
+    F -- Yes --> G[Display Instant Step-by-Step AI Solution]
     G --> H[User Submits Feedback: Helpful / Unhelpful]
     H -- Unhelpful --> I[Escalate & Re-assign to Senior Human Support Engineer]
-    F -- No --> J[Skill-Based Routing Engine Matches Assignee & Department]
-    J --> K[User Monitors Ticket Progress in 'My Tickets']
-    K --> L[Receive Live Agent Responses & WebSockets Notifications]
+    F -- No --> J[Routing Engine Assigns Ticket to Department & Employee]
+    J --> K[User Tracks Status & SLA in 'My Tickets']
+    K --> L[Receive Live Agent Replies & WebSockets Notifications]
 ```
 
 **Step-by-step User Experience**:
@@ -71,30 +71,47 @@ graph TD
 
 ---
 
-### 🛡️ 2. Admin & Support Agent Flow (Ticket Management & Operations)
+### 👩‍💻 2. Support Employee Flow (Ticket Resolver / Support Agent)
 
 ```mermaid
 graph TD
-    A1[Admin / Support Agent Logs In] --> B1[Access Admin Dashboard]
-    B1 --> C1[View SLA Status Badges: Breached / At Risk / On Track]
-    C1 --> D1[Filter List by Status, Category, Severity, or SLA Condition]
-    D1 --> E1[Open Ticket Detail Panel]
-    E1 --> F1[Review AI Sentiment, Category Confidence & Suggested Steps]
-    F1 --> G1[Click '✨ Generate AI Reply' for 1-Click Contextual Draft]
-    G1 --> H1[Review, Edit, and Publish Reply to Customer]
-    H1 --> I1[Add Internal Staff Notes or Reassign Employee]
-    I1 --> J1[Export Ticket Metrics via '📥 Export CSV']
-    J1 --> K1[Configure API Keys & Slack Webhooks via '⚙️ Web UI Settings']
-    K1 --> L1[Monitor Department Load & Resolution Analytics]
+    A2[Employee Logs In] --> B2[View Assigned Tickets in Ticket Management List]
+    B2 --> C2[Check Real-Time SLA Countdown Badges: Breached / At Risk / On Track]
+    C2 --> D2[Open Ticket Detail View]
+    D2 --> E2[Inspect AI Triage: Category, Severity, Sentiment & Suggested Steps]
+    E2 --> F2[Click '✨ Generate AI Reply' for 1-Click Contextual Draft]
+    F2 --> G2[Review, Edit & Send Response to Customer]
+    G2 --> H2[Add Internal Staff Notes for Team Collaboration]
+    H2 --> I2[Update Ticket Status to In Progress / Resolved / Closed]
 ```
 
-**Step-by-step Admin / Support Agent Experience**:
-1. **Dashboard Triage**: View total ticket volume, critical alerts, and color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
-2. **Search & Filtering**: Filter tickets by category, severity, status, search query, or SLA status.
+**Step-by-step Support Employee Experience**:
+1. **Work Queue Inspection**: View incoming tickets assigned based on skill matching and current workload.
+2. **SLA Countdown & Urgency**: Monitor color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
 3. **AI Smart Reply Assistant**: Click **"✨ Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
-4. **Lifecycle & Escalations**: Add internal team notes, change status, or manually escalate high-priority tickets to dispatch urgent Slack alerts.
-5. **Data & Analytics**: Export filtered tickets into formatted CSV spreadsheets and view Recharts department workload graphs.
-6. **System Settings**: Paste Groq API keys or Slack Webhooks in-browser and send test Slack cards with 1-click.
+4. **Customer Communication & Notes**: Publish replies, attach internal team notes, and manage ticket status (`In Progress`, `Pending Info`, `Resolved`, `Closed`).
+
+---
+
+### 🛡️ 3. Admin & System Lead Flow (Management, Settings & Analytics)
+
+```mermaid
+graph TD
+    A3[System Admin Logs In] --> B3[Access Full System Overview & Control Panel]
+    B3 --> C3[Manage Employee Directory: Skills, Workload & Availability]
+    C3 --> D3[Configure Web UI Settings: Groq API Key & Slack Webhooks]
+    D3 --> E3[Test Slack Alert Card Connection with 1-Click]
+    E3 --> F3[Monitor High-Priority & SLA Breached Tickets Across All Departments]
+    F3 --> G3[Export Filtered Ticket Dataset via '📥 Export CSV']
+    G3 --> H3[View Executive Analytics: Department Load, Category Breakdown & Performance]
+    H3 --> I3[1-Click Demo Reset to Restore Test Scenario Tickets]
+```
+
+**Step-by-step System Admin Experience**:
+1. **Global Oversight**: Track tickets across all departments (Engineering, DevOps, IT, HR, Finance, Legal, Product).
+2. **Employee Directory Management**: Add/edit support staff, update skill tags, set availability (`Available`, `Busy`, `On Leave`), and balance ticket workloads.
+3. **Web UI Settings & Integrations**: In-browser configuration of Groq API Keys, LLM models, and Slack Webhooks with 1-click connection testing.
+4. **Data Reporting & Analytics**: Export filtered tickets into CSV spreadsheets and review Recharts metrics for SLA compliance and department trends.
 
 ---
 
