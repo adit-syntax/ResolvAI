@@ -17,7 +17,7 @@ from typing import List
 from database import engine, SessionLocal, Base
 from models import *  # Import all models so they're registered
 from seed_data import seed_employees
-from routers import tickets, employees, analytics
+from routers import tickets, employees, analytics, settings
 
 
 # ─── WebSocket Connection Manager ────────────────────────────────────
@@ -99,6 +99,7 @@ app.add_middleware(
 app.include_router(tickets.router)
 app.include_router(employees.router)
 app.include_router(analytics.router)
+app.include_router(settings.router)
 
 
 # ─── WebSocket Endpoint ──────────────────────────────────────────────

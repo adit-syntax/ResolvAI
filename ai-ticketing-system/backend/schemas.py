@@ -75,6 +75,8 @@ class TicketResponse(BaseModel):
     updated_at: Optional[datetime]
     assigned_at: Optional[datetime]
     resolved_at: Optional[datetime]
+    sla_due_at: Optional[datetime] = None
+    sla_status: Optional[str] = None
     assignee_name: Optional[str] = None
     assignee_availability: Optional[str] = None
     replies: List[ReplyResponse] = []

@@ -26,6 +26,7 @@ export default function TicketDetail() {
   const [loading, setLoading] = useState(true);
   const [replyForm, setReplyForm] = useState('');
   const [statusUpdate, setStatusUpdate] = useState('');
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
 
   const pollRef = useRef(null);
   const CLOSED_STATUSES = ['Resolved', 'Closed'];
@@ -103,6 +104,20 @@ export default function TicketDetail() {
     } catch (err) { alert(err.message); }
   };
 
+  const handleGenerateAIReply = async () => {
+    setAiDraftLoading(true);
+    try {
+      const res = await ticketApi.generateAIReply(id);
+      if (res && res.draft) {
+        setReplyForm(res.draft);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to generate AI draft');
+    } finally {
+      setAiDraftLoading(false);
+    }
+  };
+
   const getSeverityClass = (s) => {
     const m = { 'Critical': 'badge-critical', 'High': 'badge-high', 'Medium': 'badge-medium', 'Low': 'badge-low' };
     return `badge ${m[s] || 'badge-medium'}`;
@@ -113,6 +128,35 @@ export default function TicketDetail() {
       'Pending Info': 'badge-status-progress', 'Resolved': 'badge-status-resolved', 'Closed': 'badge-status-closed' };
     return `badge ${m[s] || 'badge-status-open'}`;
   };
+
+  function DetailSLABadge({ slaStatus }) {
+    if (!slaStatus || slaStatus === 'resolved') {
+      return (
+        <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono flex items-center gap-1">
+          ✓ SLA Met
+        </span>
+      );
+    }
+    if (slaStatus === 'breached') {
+      return (
+        <span className="badge bg-red-500/20 text-red-400 border border-red-500/30 font-mono animate-pulse flex items-center gap-1">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> SLA Breached
+        </span>
+      );
+    }
+    if (slaStatus === 'at_risk') {
+      return (
+        <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5 text-amber-400" /> SLA &lt; 1h Remaining
+        </span>
+      );
+    }
+    return (
+      <span className="badge bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono flex items-center gap-1">
+        <Clock className="w-3.5 h-3.5 text-blue-400" /> SLA On Track
+      </span>
+    );
+  }
 
   const formatDate = (d) =>
     d ? new Date(d).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : '—';
@@ -164,6 +208,7 @@ export default function TicketDetail() {
             <span className="text-sm text-gray-500 font-mono">#{ticket.id}</span>
             <span className={getSeverityClass(ticket.severity)}>{ticket.severity}</span>
             <span className={getStatusClass(ticket.status)}>{ticket.status}</span>
+            <DetailSLABadge slaStatus={ticket.sla_status} />
             {ticket.auto_resolved && (
               <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AI Resolved</span>
             )}
@@ -244,7 +289,20 @@ export default function TicketDetail() {
                     onChange={(e) => setReplyForm(e.target.value)}
                     className="input-field mb-3 resize-none bg-surface-800/80 focus:border-primary-500"
                   />
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={handleGenerateAIReply}
+                      disabled={aiDraftLoading}
+                      className="px-3.5 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
+                    >
+                      {aiDraftLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      )}
+                      {aiDraftLoading ? 'Drafting with AI...' : '✨ Generate AI Reply'}
+                    </button>
                     <button type="submit" className="btn-primary text-sm py-2 px-6 flex items-center gap-2 shadow-lg shadow-primary-500/20">
                       <Send className="w-4 h-4" /> Send Reply to User
                     </button>

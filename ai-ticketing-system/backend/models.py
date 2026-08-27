@@ -121,6 +121,7 @@ class Ticket(Base):
     updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
     assigned_at = Column(DateTime, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
+    sla_due_at = Column(DateTime, nullable=True)
 
     # Relationships
     assignee = relationship("Employee", back_populates="assigned_tickets")
@@ -201,3 +202,13 @@ class Notification(Base):
     notification_type = Column(String(50), nullable=False)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=now_ist)
+
+
+class SystemSetting(Base):
+    """Key-value system configuration dynamically set via Web UI."""
+    __tablename__ = "system_settings"
+
+    key = Column(String(100), primary_key=True, index=True)
+    value = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
+

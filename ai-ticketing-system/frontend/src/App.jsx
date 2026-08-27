@@ -7,11 +7,12 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import {
   Headphones, ListTodo, Users, BarChart3,
-  Menu, CircleDot, LogOut, User, ShieldCheck, FileText
+  Menu, CircleDot, LogOut, User, ShieldCheck, FileText, Settings
 } from 'lucide-react';
 
 // Components & Pages
 import ResolvAiLogo from './components/ResolvAiLogo.jsx';
+import SettingsModal from './components/SettingsModal.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import UserPortal from './pages/UserPortal.jsx';
@@ -58,7 +59,9 @@ function NavItem({ path, icon: Icon, label, onClose }) {
 
 // ─── Sidebar ─────────────────────────────────────────────
 
-function Sidebar({ isOpen, onClose, role, email, onLogout }) {
+// ─── Sidebar ─────────────────────────────────────────────
+
+function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
   const isAdmin = role === 'admin';
   const navItems = isAdmin ? adminNavItems : userNavItems;
   const sectionLabel = isAdmin ? 'Admin' : 'User';
@@ -118,10 +121,19 @@ function Sidebar({ isOpen, onClose, role, email, onLogout }) {
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-[#2a2a2a] space-y-2">
-          <div className="flex items-center gap-2 px-3 py-2">
+          <button
+            onClick={() => { onOpenSettings(); onClose(); }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-purple-400 hover:bg-purple-500/10 transition-all font-medium border border-white/5"
+          >
+            <Settings className="w-4 h-4 text-purple-400" />
+            ⚙️ Integrations & AI
+          </button>
+
+          <div className="flex items-center gap-2 px-3 py-1">
             <div className="w-2 h-2 rounded-full bg-[#22c55e]" />
             <span className="text-xs text-neutral-500">System Online</span>
           </div>
+
           <button
             id="sidebar-logout-btn"
             onClick={onLogout}
@@ -140,6 +152,7 @@ function Sidebar({ isOpen, onClose, role, email, onLogout }) {
 
 function Layout({ children, role, email, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
@@ -149,15 +162,22 @@ function Layout({ children, role, email, onLogout }) {
         role={role}
         email={email}
         onLogout={onLogout}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-[#0f0f0f] border-b border-[#2a2a2a] px-4 py-3">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-[#0f0f0f] border-b border-[#2a2a2a] px-4 py-3 flex items-center justify-between">
         <button
           onClick={() => setSidebarOpen(true)}
           className="p-2 rounded-lg hover:bg-white/5 transition-colors"
         >
           <Menu className="w-5 h-5 text-white" />
+        </button>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="p-2 rounded-lg text-purple-400 hover:bg-purple-500/10 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+        >
+          <Settings className="w-4 h-4" /> ⚙️ Settings
         </button>
       </div>
 
@@ -167,6 +187,9 @@ function Layout({ children, role, email, onLogout }) {
           {children}
         </div>
       </main>
+
+      {/* Settings & Integrations Modal */}
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

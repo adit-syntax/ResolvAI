@@ -159,9 +159,26 @@ def mock_analyze_ticket(title: str, description: str, user_email: str) -> AIAnal
 
 # ─── Real LLM Analysis ───────────────────────────────────────────────
 
+def get_groq_key() -> Optional[str]:
+    """Get Groq API key from DB settings first, falling back to .env."""
+    try:
+        from database import SessionLocal
+        from models import SystemSetting
+        db = SessionLocal()
+        try:
+            rec = db.query(SystemSetting).filter(SystemSetting.key == "groq_api_key").first()
+            if rec and rec.value and rec.value.strip():
+                return rec.value.strip()
+        finally:
+            db.close()
+    except Exception:
+        pass
+    return os.getenv("GROQ_API_KEY")
+
+
 async def analyze_with_groq(title: str, description: str, user_email: str) -> Optional[AIAnalysisResult]:
     """Analyze ticket using Groq API (LLaMA / Mixtral via Groq cloud)."""
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = get_groq_key()
     if not api_key:
         return None
 
@@ -244,3 +261,70 @@ async def analyze_ticket(title: str, description: str, user_email: str) -> AIAna
     # Fallback to mock
     print("[AI Service] Using mock analysis (no API keys configured)")
     return mock_analyze_ticket(title, description, user_email)
+
+
+async def generate_ai_reply_draft(title: str, description: str, category: str, severity: str, replies_summary: str = "") -> str:
+    """
+    Generate an AI draft reply for support employees to respond to a ticket.
+    Supports Groq/Claude with an intelligent template fallback.
+    """
+    api_key = get_groq_key()
+    if api_key:
+        try:
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            prompt = f"""You are a professional IT support representative.
+Draft a helpful, polite, and technical solution or update for this support ticket.
+
+Ticket Title: {title}
+Category: {category}
+Severity: {severity}
+User Description: {description}
+Conversation History: {replies_summary if replies_summary else "No prior replies."}
+
+Instructions:
+- Provide clear step-by-step troubleshooting or confirmation.
+- Be professional, supportive, and concise.
+- Include a sign-off.
+- Do not include markdown code block quotes around the response.
+"""
+            response = client.chat.completions.create(
+                model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                messages=[
+                    {"role": "system", "content": "You draft polite support ticket responses."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=400,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"[AI Service] Reply generation error: {e}")
+
+    # Fallback mock template generator
+    cat_lower = (category or "").lower()
+    sev_lower = (severity or "").lower()
+
+    if "server" in cat_lower or "db" in cat_lower or "critical" in sev_lower:
+        return (
+            f"Hello,\n\n"
+            f"Thank you for reporting this issue. Our engineering team is currently investigating '{title}'. "
+            f"We have elevated this ticket to High Priority and are performing diagnostics on our systems.\n\n"
+            f"We will update you as soon as we have isolated the cause or deployed a fix.\n\n"
+            f"Best regards,\nResolvAI Support Team"
+        )
+    elif "access" in cat_lower or "bug" in cat_lower:
+        return (
+            f"Hi there,\n\n"
+            f"Thanks for reaching out regarding '{title}'. We have reviewed your request and are updating your account permissions / reviewing the software logs.\n\n"
+            f"Could you please try logging out and logging back in, or verifying if the issue persists on your side?\n\n"
+            f"Regards,\nResolvAI Support Team"
+        )
+    else:
+        return (
+            f"Hello,\n\n"
+            f"Thank you for contacting support regarding '{title}'. We have assigned this request to a specialist in our {category or 'Technical'} department.\n\n"
+            f"We are actively working on a resolution and will follow up with you shortly.\n\n"
+            f"Best regards,\nResolvAI Support Team"
+        )
+

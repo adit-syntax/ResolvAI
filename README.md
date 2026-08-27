@@ -1,247 +1,358 @@
-# 🤖 ResolvAI — Smart AI Ticketing System
+# 🤖 ResolvAI — Smart AI Ticketing & Autonomous Helpdesk System
 
-A smart internal ticketing platform where AI reads incoming tickets, analyzes them using LLM, auto-resolves when possible, or intelligently routes them to the correct department and employee.
+> **ResolvAI** is an enterprise-grade AI internal ticketing platform. It uses Large Language Models (LLM) to read incoming tickets, classify severity and sentiment, auto-resolve common inquiries, route complex issues to the best-suited employees based on skill tags and workload, track SLAs with real-time countdown badges, and notify teams via Slack.
 
-## Architecture
+---
+
+## 🏛️ Architecture
 
 ```
-Frontend (React) → API (FastAPI) → AI Analysis Layer → Routing Engine → Ticket System → Analytics
+                                  +---------------------------------------+
+                                  |         Web Frontend (React 18)       |
+                                  | (Landing, User Portal, Admin Dashboard|
+                                  |     Settings Modal, Google OAuth)     |
+                                  +-------------------+-------------------+
+                                                      |
+                                          HTTP REST / WebSocket
+                                                      |
+                                                      v
+                                  +---------------------------------------+
+                                  |         Backend API (FastAPI)         |
+                                  |     (Routers: Tickets, Employees,     |
+                                  |          Analytics, Settings)         |
+                                  +---------+-------------------+---------+
+                                            |                   |
+                     +----------------------+                   +-----------------------+
+                     |                                                                  |
+                     v                                                                  v
+    +---------------------------------+                               +----------------------------------+
+    |         AI Engine Layer         |                               |     Routing & SLA Logic        |
+    |  - Groq LLaMA 3.3 70B LLM       |                               |  - Department Category Mapping   |
+    |  - Auto-Resolution Engine       |                               |  - Skill Tag Match & Load Balancing|
+    |  - AI Smart Reply Assistant     |                               |  - SLA Status & Escalation Timers|
+    |  - Offline Keyword Fallback     |                               +----------------+-----------------+
+    +----------------+----------------+                                                |
+                     |                                                                 |
+                     v                                                                 v
+    +---------------------------------+                               +----------------------------------+
+    |     System Settings & SQLite    |                               |      External Dispatches         |
+    |  - SQLite (tickets, employees)  |                               |  - Real-time WebSockets (`/ws`)  |
+    |  - SystemSetting key-value DB   |                               |  - Slack Webhook Cards           |
+    +---------------------------------+                               +----------------------------------+
 ```
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python, FastAPI, SQLAlchemy |
-| Database | SQLite |
-| Frontend | React 18, TailwindCSS 3, Recharts |
-| AI/LLM | Groq(free cost) |
-| Real-time | WebSockets |
+## 🔄 User & Admin System Workflows
 
+### 👤 1. End-User Flow (Ticket Creation & Auto-Resolution)
 
+```mermaid
+graph TD
+    A[User Visits Platform] --> B[Sign in via Email/Password or Google OAuth]
+    B --> C[Navigate to User Portal]
+    C --> D[Submit Ticket Title & Natural Language Description]
+    D --> E[AI Evaluates Category, Severity & User Sentiment]
+    E --> F{Is Ticket Eligible for AI Auto-Resolution?}
+    F -- Yes --> G[Present Instant Step-by-Step AI Solution]
+    G --> H[User Submits Feedback: Helpful / Unhelpful]
+    H -- Unhelpful --> I[Escalate & Re-assign to Senior Human Support Engineer]
+    F -- No --> J[Skill-Based Routing Engine Matches Assignee & Department]
+    J --> K[User Monitors Ticket Progress in 'My Tickets']
+    K --> L[Receive Live Agent Responses & WebSockets Notifications]
+```
 
-## Quick Start
+**Step-by-step User Experience**:
+1. **Authentication**: Sign in using Email/Password, **Google OAuth ("Continue with Google")**, or Demo User quick-login.
+2. **Submit Ticket**: Fill in the title and describe the issue in plain text.
+3. **Instant AI Analysis**: The LLM automatically extracts category (`Access`, `Billing`, `Server`, `DB`, `HR`, `Bug`, `Feature`), severity rating, and sentiment.
+4. **Auto-Resolution Check**: Common requests (password reset steps, leave policies, duplicate billing) receive instant resolution instructions.
+5. **Real-time Updates**: Track assigned employee status, active SLA countdowns, and chat directly with support agents.
+
+---
+
+### 🛡️ 2. Admin & Support Agent Flow (Ticket Management & Operations)
+
+```mermaid
+graph TD
+    A1[Admin / Support Agent Logs In] --> B1[Access Admin Dashboard]
+    B1 --> C1[View SLA Status Badges: Breached / At Risk / On Track]
+    C1 --> D1[Filter List by Status, Category, Severity, or SLA Condition]
+    D1 --> E1[Open Ticket Detail Panel]
+    E1 --> F1[Review AI Sentiment, Category Confidence & Suggested Steps]
+    F1 --> G1[Click '✨ Generate AI Reply' for 1-Click Contextual Draft]
+    G1 --> H1[Review, Edit, and Publish Reply to Customer]
+    H1 --> I1[Add Internal Staff Notes or Reassign Employee]
+    I1 --> J1[Export Ticket Metrics via '📥 Export CSV']
+    J1 --> K1[Configure API Keys & Slack Webhooks via '⚙️ Web UI Settings']
+    K1 --> L1[Monitor Department Load & Resolution Analytics]
+```
+
+**Step-by-step Admin / Support Agent Experience**:
+1. **Dashboard Triage**: View total ticket volume, critical alerts, and color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
+2. **Search & Filtering**: Filter tickets by category, severity, status, search query, or SLA status.
+3. **AI Smart Reply Assistant**: Click **"✨ Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
+4. **Lifecycle & Escalations**: Add internal team notes, change status, or manually escalate high-priority tickets to dispatch urgent Slack alerts.
+5. **Data & Analytics**: Export filtered tickets into formatted CSV spreadsheets and view Recharts department workload graphs.
+6. **System Settings**: Paste Groq API keys or Slack Webhooks in-browser and send test Slack cards with 1-click.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Description |
+|-------|-----------|-------------|
+| **Frontend Core** | React 18, Vite | SPA with fast hot-reloading & clean modular component architecture |
+| **Styling & Icons** | Tailwind CSS 3, Lucide Icons | Modern dark-mode glassmorphic design system |
+| **Data Visualization** | Recharts | Interactive department load, category, and sentiment analytics |
+| **Backend API** | Python 3.10+, FastAPI | High-performance async REST API framework |
+| **Database & ORM** | SQLite, SQLAlchemy | Relational DB with automatic schema migrations & key-value settings storage |
+| **AI / LLM Engine** | Groq (`llama-3.3-70b-versatile`) | Ultra-fast LLM inference with smart offline fallback mode |
+| **Real-time Engine** | WebSockets (`/ws`) | Live updates for tickets, chat replies, and system notifications |
+| **Notifications** | Slack Incoming Webhooks | Rich alert cards dispatched on urgent tickets or SLA escalations |
+| **Auth & Identity** | Client Auth + Google OAuth | Email/Password, Google OAuth ("Continue with Google"), 1-click Demo quick-login |
+
+---
+
+## ⚡ Quick Start & Setup
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
+- **Python**: `3.10` or higher
+- **Node.js**: `18.x` or higher
+- **npm**: `9.x` or higher
 
-### Backend Setup
+### 1. Backend Setup
 
 ```bash
-cd backend
+# Navigate to backend directory
+cd ai-ticketing-system/backend
+
+# Install Python dependencies
 pip install -r requirements.txt
 
-# (Optional) Configure AI — system works without API keys using mock AI
-copy .env.example .env
-# Edit .env to add OPENAI_API_KEY or ANTHROPIC_API_KEY
+# (Optional) Copy environment variables sample
+cp .env.example .env
 
-# Start server
+# Start FastAPI dev server with auto-reload
 uvicorn main:app --reload --port 8000
 ```
+> 💡 *Note: The backend auto-creates SQLite tables, registers system settings, and seeds 15 employee directory records on first startup.*
 
-The backend auto-creates the database, tables, and seeds 15 employees on first run.
-
-### Frontend Setup
+### 2. Frontend Setup
 
 ```bash
-cd frontend
+# Navigate to frontend directory
+cd ai-ticketing-system/frontend
+
+# Install Node dependencies
 npm install
+
+# Start Vite dev server
 npm run dev
 ```
+> Open **http://localhost:5173** in your browser.
 
-Open http://localhost:5173
+---
 
-### API Docs
+## ⚙️ Configuration & Web UI Settings
 
-FastAPI Swagger UI: http://localhost:8000/docs
+You can configure integrations in **two ways**:
 
-## API Endpoints
+1. **Via Web UI (Recommended)**: Click **"⚙️ Integrations & AI"** in the sidebar. Enter your Groq API key or Slack Webhook URL directly from your browser. Settings are saved securely to SQLite.
+2. **Via `.env` File**:
+   ```env
+   GROQ_API_KEY=gsk_your_groq_api_key_here
+   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T000/B000/XXXXX
+   ```
 
+---
+
+## 📡 Complete API Endpoints Documentation
+
+Swagger Interactive API Docs: `http://localhost:8000/docs`
+
+### 🎟️ Tickets (`/api/tickets`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/tickets/` | Create ticket (AI analysis + routing) |
-| GET | `/api/tickets/` | List tickets with filters |
-| GET | `/api/tickets/{id}` | Get ticket detail |
-| PATCH | `/api/tickets/{id}/status` | Update status |
-| POST | `/api/tickets/{id}/notes` | Add note |
-| GET | `/api/tickets/{id}/timeline` | Get timeline |
-| POST | `/api/tickets/{id}/feedback` | Submit feedback |
-| POST | `/api/tickets/{id}/escalate` | Escalate ticket |
-| GET | `/api/employees/` | List employees |
-| POST | `/api/employees/` | Add employee |
-| PUT | `/api/employees/{id}` | Update employee |
-| DELETE | `/api/employees/{id}` | Deactivate employee |
-| GET | `/api/analytics/overview` | Dashboard stats |
-| GET | `/api/analytics/department-load` | Department chart data |
-| GET | `/api/analytics/top-categories` | Top 5 categories |
-| WS | `/ws` | WebSocket real-time updates |
+| `POST` | `/api/tickets/` | Create a new ticket (triggers AI analysis, auto-resolution check, & routing) |
+| `GET` | `/api/tickets/` | List tickets with filters (`status`, `department`, `severity`, `category`, `sla_status`, `search`) |
+| `GET` | `/api/tickets/{id}` | Get detailed ticket object with replies, notes, SLA status, and timeline |
+| `PATCH` | `/api/tickets/{id}/status` | Update ticket status (`New`, `Assigned`, `In Progress`, `Pending Info`, `Resolved`, `Closed`) |
+| `POST` | `/api/tickets/{id}/notes` | Add internal employee note to a ticket |
+| `POST` | `/api/tickets/{id}/replies` | Post public reply to ticket conversation |
+| `POST` | `/api/tickets/{id}/generate-reply` | ✨ Generate AI draft reply using Groq LLM |
+| `GET` | `/api/tickets/{id}/timeline` | Fetch activity timeline events |
+| `POST` | `/api/tickets/{id}/feedback` | Submit user satisfaction feedback (`Helpful` / `Unhelpful`) |
+| `POST` | `/api/tickets/{id}/escalate` | Escalate ticket severity & trigger urgent Slack notification |
+| `POST` | `/api/tickets/check-escalations` | System timer check for overdue tickets |
+| `POST` | `/api/tickets/reset-seed` | 🔄 1-Click reset database back to initial seed dataset |
 
-## Example Test Tickets
+### ⚙️ System Settings (`/api/settings`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/settings/` | Fetch current system settings & integration configuration states |
+| `POST` | `/api/settings/` | Save Groq API key, model choice, or Slack webhook URL |
+| `POST` | `/api/settings/test-slack` | 🧪 Send test alert card to configured Slack channel |
 
-The system includes 10 pre-built test ticket scenarios in `backend/seed_data.py`:
+### 👥 Employees (`/api/employees`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/employees/` | List employee directory with skill tags & current ticket workloads |
+| `POST` | `/api/employees/` | Register new employee |
+| `PUT` | `/api/employees/{id}` | Update employee details, skills, or availability |
+| `DELETE` | `/api/employees/{id}` | Deactivate employee |
 
-1. Password reset (→ Auto-resolve)
-2. Server down — URGENT (→ DevOps, Critical)
-3. Database query slow (→ Engineering, Critical)
-4. Leave policy inquiry (→ Auto-resolve)
-5. Billing discrepancy (→ Auto-resolve)
-6. Feature request: Dark mode (→ Product)
-7. Access permissions after role change (→ IT, High)
-8. Payroll calculation error (→ Finance, Frustrated)
-9. Application crash on export (→ Engineering, Bug)
-10. Compliance review needed (→ Legal, High)
+### 📊 Analytics (`/api/analytics`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/analytics/overview` | Executive KPI stats (total tickets, auto-resolved %, SLA compliance, resolution time) |
+| `GET` | `/api/analytics/department-load` | Department ticket distribution for charts |
+| `GET` | `/api/analytics/top-categories` | Top 5 ticket category breakdown |
 
-## Login
-<img width="500" height="900" alt="image" src="https://github.com/user-attachments/assets/73211743-dbb5-46fd-8b92-194c2a90b8a6" />
+### 🔌 WebSockets (`/ws`)
+| Protocol | Endpoint | Description |
+|----------|----------|-------------|
+| `WS` | `/ws` | Real-time WebSocket connection for live ticket updates and notifications |
 
+---
 
-## Modules
+## 🧪 Example Test Tickets
 
-1. **Ticket Intake & AI Analysis** — Submit tickets, AI returns structured category/severity/routing
-<img width="1800" height="800" alt="image" src="https://github.com/user-attachments/assets/886c7ee7-b181-4e05-be1f-872876fea964" />
+The system includes 10 pre-built test ticket scenarios (`backend/seed_data.py`):
 
-3. **Auto-Resolution Engine** — AI auto-resolves common tickets (password resets, FAQs, policies)
-<img width="400" height="400" alt="image" src="https://github.com/user-attachments/assets/cbcf8b69-b60b-4006-9da8-88fa5e5641f3" />
+1. **Password reset request** → *Auto-Resolved by AI*
+2. **Server is completely down — URGENT** → *Assigned to DevOps (Critical Severity)*
+3. **Database query taking too long** → *Assigned to Engineering (Critical Severity)*
+4. **Leave policy inquiry** → *Auto-Resolved by AI*
+5. **Billing discrepancy** → *Auto-Resolved by AI*
+6. **Feature request: Dark mode** → *Assigned to Product*
+7. **Access permissions after role change** → *Assigned to IT Support (High Severity)*
+8. **Payroll calculation error** → *Assigned to Finance*
+9. **Application crash on CSV export** → *Assigned to Engineering*
+10. **Compliance review needed** → *Assigned to Legal*
 
-4. **Intelligent Department Routing** — Rules-based routing to Engineering, DevOps, HR, Finance, etc.
+---
 
+## 🚀 Key Modules & Feature Walkthrough
 
-5. **Employee Directory & Assignee Suggestion** — Skill-based matching considering load & availability
-<img width="400" height="350" alt="image" src="https://github.com/user-attachments/assets/4a12e923-d59b-463a-967c-bcc652c4e718" />
-<img width="1000" height="700" alt="image" src="https://github.com/user-attachments/assets/6ed46927-e18c-4d67-ae8c-a8d806f4b218" />
+### 1. 🔑 Authentication & Google OAuth
+Supports Email/Password sign-in & registration, **Google OAuth ("Continue with Google")** with a 1-click account picker, and instant **Demo User / Demo Admin** fast-logins.
 
+![Google OAuth & Login Interface](https://github.com/user-attachments/assets/73211743-dbb5-46fd-8b92-194c2a90b8a6)
 
+### 2. 🌐 Landing Page & Interactive AI Demo Modal
+Features a landing page highlighting AI automation capabilities and an interactive **Live AI Processing Simulation Modal**.
 
-6. **Ticket Lifecycle Management** — Status tracking, notes, escalation, timeline, notifications
-<img width="1000" height="150" alt="image" src="https://github.com/user-attachments/assets/b4e420bf-c92e-4a52-905d-b075e83fad87" />
-<img width="350" height="450" alt="image" src="https://github.com/user-attachments/assets/9d764f2e-44a0-4465-b189-5d88ecac4f97" />
+### 3. ✍️ Ticket Intake & AI Triage (User Portal)
+Users submit issues in natural language. The AI immediately analyzes category, severity (`Critical`, `High`, `Medium`, `Low`), sentiment (`Frustrated`, `Polite`, `Neutral`), and confidence score.
 
+![AI Ticket Analysis](https://github.com/user-attachments/assets/886c7ee7-b181-4e05-be1f-872876fea964)
 
-7. **Analytics Dashboard** — Charts (Recharts): department load, categories, trends, performance
-<img width="1000" height="600" alt="image" src="https://github.com/user-attachments/assets/a538e275-6534-472d-9f12-402662606025" />
+### 4. ⚡ Auto-Resolution Engine
+For standard requests (password resets, leave policy FAQs, billing double-charges), the AI provides instant resolution steps with a user feedback loop (`Helpful` / `Unhelpful`).
 
+![Auto-Resolution Engine](https://github.com/user-attachments/assets/cbcf8b69-b60b-4006-9da8-88fa5e5641f3)
 
+### 5. 🔀 Intelligent Department & Employee Routing
+Complex issues are routed to departments (Engineering, DevOps, IT, HR, Finance, Legal, Product) and assigned to employees based on **skill tags**, **current ticket workload**, and **availability**.
 
+![Employee Matching & Directory](https://github.com/user-attachments/assets/4a12e923-d59b-463a-967c-bcc652c4e718)
+![Assignee Selection](https://github.com/user-attachments/assets/6ed46927-e18c-4d67-ae8c-a8d806f4b218)
 
-## Project Structure
+### 6. ⏱️ SLA Countdown & Status Badges
+Tracks strict Service Level Agreements based on severity:
+- `Critical`: 2 Hours
+- `High`: 6 Hours
+- `Medium`: 24 Hours
+- `Low`: 48 Hours
+Visual badges highlight tickets as **`SLA Met ✓`**, **`SLA On Track 💙`**, **`SLA < 1h ⏱️`**, or **`SLA Breached 🚨`**.
+
+### 7. ✨ AI Smart Reply Assistant
+Support agents can click **"✨ Generate AI Reply"** on any ticket detail page. The Groq LLM reads conversation context and crafts a professional draft response.
+
+### 8. ⚙️ Web UI Settings & Integration Manager
+In-browser modal to manage Groq API Keys, select LLM models, configure Slack Webhooks, test connections, or reset demo seed data.
+
+### 9. 📥 CSV Ticket Export
+Download filtered ticket datasets into formatted `.csv` spreadsheets with 1-click.
+
+### 10. 📊 Executive Analytics Dashboard
+Visualizes ticket volume trends, department workloads, category distributions, and SLA metrics via Recharts.
+
+![Analytics Dashboard](https://github.com/user-attachments/assets/a538e275-6534-472d-9f12-402662606025)
+
+---
+
+## 📂 Project Structure
 
 ```
 ai-ticketing-system/
 ├── backend/
-│   ├── main.py              # FastAPI app + WebSocket
-│   ├── database.py           # SQLite + SQLAlchemy setup
-│   ├── models.py             # ORM models
-│   ├── schemas.py            # Pydantic schemas
-│   ├── ai_service.py         # LLM prompt + OpenAI/Claude + mock
-│   ├── routing_engine.py     # Department routing rules
-│   ├── assignee_engine.py    # Employee matching engine
-│   ├── seed_data.py          # Employee + ticket seed data
-│   ├── requirements.txt
-│   ├── .env.example
+│   ├── main.py                 # FastAPI application & WebSocket server
+│   ├── database.py              # SQLite connection & SQLAlchemy Session
+│   ├── models.py                # ORM Database Models (Ticket, Employee, SystemSetting, etc.)
+│   ├── schemas.py               # Pydantic validation schemas
+│   ├── ai_service.py            # Groq LLM integration + Smart Offline Engine
+│   ├── routing_engine.py        # Rule-based department classification
+│   ├── assignee_engine.py       # Skill-matching & load-balancing algorithm
+│   ├── seed_data.py             # 15 seed employees & 10 demo scenario tickets
+│   ├── requirements.txt         # Python dependencies
+│   ├── .env.example             # Sample environment configuration
 │   └── routers/
-│       ├── tickets.py        # Ticket CRUD + lifecycle
-│       ├── employees.py      # Employee directory
-│       └── analytics.py      # Dashboard analytics
+│       ├── tickets.py           # Ticket CRUD, SLA tracking, AI reply & seed reset
+│       ├── settings.py          # System settings & Slack webhook verification
+│       ├── employees.py         # Employee directory CRUD
+│       └── analytics.py         # Dashboard analytics & charts
 ├── frontend/
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   ├── index.html
+│   ├── package.json             # React dependencies
+│   ├── vite.config.js           # Vite configuration
+│   ├── tailwind.config.js       # Tailwind CSS theme tokens
+│   ├── index.html               # Entry HTML
 │   └── src/
-│       ├── main.jsx
-│       ├── App.jsx           # Routing + layout
-│       ├── api.js            # API client
-│       ├── index.css         # Design system
+│       ├── main.jsx             # React DOM root
+│       ├── App.jsx              # Navigation sidebar, router & layout
+│       ├── api.js               # Centralized REST API client
+│       ├── index.css            # Custom CSS & glassmorphic design system
+│       ├── components/
+│       │   ├── SettingsModal.jsx      # Web UI Integrations & Settings modal
+│       │   ├── DemoOverlayModal.jsx   # Interactive AI processing demo overlay
+│       │   ├── LandingCarousel.jsx    # Hero feature carousel
+│       │   ├── ResolvAiLogo.jsx       # SVG Brand Logo
+│       │   └── TicketFlowGraph.jsx    # Interactive lifecycle graph
 │       └── pages/
-│           ├── TicketSubmit.jsx
-│           ├── TicketList.jsx
-│           ├── TicketDetail.jsx
-│           ├── EmployeeDirectory.jsx
-│           └── Analytics.jsx
+│           ├── LandingPage.jsx        # Public landing & feature showcase
+│           ├── LoginPage.jsx          # Auth, Google OAuth & Demo Quick-Logins
+│           ├── UserPortal.jsx         # User ticket submission & intake
+│           ├── MyTickets.jsx          # End-user ticket tracking
+│           ├── TicketList.jsx         # Support Agent / Admin ticket management & CSV export
+│           ├── TicketDetail.jsx       # Ticket conversation, AI Smart Reply & notes
+│           ├── EmployeeDirectory.jsx  # Employee directory & workload manager
+│           └── Analytics.jsx          # Recharts executive analytics dashboard
 └── README.md
 ```
-
-
-## 🚀 Features
-
-### 1️⃣ AI Ticket Analysis
-When a user submits a ticket, the AI reads the issue and identifies:
-
-- category  
-- severity  
-- suggested response  
-
-### 2️⃣ Auto Ticket Routing
-The system automatically routes tickets to the correct department such as:
-
-- Engineering  
-- DevOps  
-- HR  
-- Finance  
-
-### 3️⃣ Real-time Chat System
-Users and support agents can communicate through a live chat system without refreshing the page.
-
-### 4️⃣ Employee Directory
-Admins can manage employees and view:
-
-- ticket workload  
-- department  
-- availability  
-
-### 5️⃣ Ticket Lifecycle Management
-Tickets move through different states:
-
-- Open  
-- In Progress  
-- Closed  
-
-### 6️⃣ Analytics Dashboard
-The system provides analytics including:
-
-- department workload  
-- ticket categories  
-- performance metrics  
-
 
 ---
 
 ## ⚠️ Known Limitations
 
-Currently the AI system does not learn automatically from previously solved tickets. When a user marks a solution as satisfactory, the system does not store that knowledge to improve future responses.
-
-Additionally, the project uses SQLite which is suitable for development and demo purposes but may not scale well for large production systems.
-
-AI responses may also require human verification for complex technical issues.
-
+1. **Local Authentication**: User sessions are currently client-managed with role state in local storage. Production enterprise deployments should attach JWT token verification middleware.
+2. **SQLite Database**: SQLite is lightweight and zero-config for local development/demos. Large enterprise instances should switch to PostgreSQL.
+3. **Groq Rate Limits**: Groq's free tier has rate limits; the built-in offline engine handles rate limit fallbacks seamlessly without breaking requests.
 
 ---
 
 ## 🔮 Future Improvements
 
-With more development time, the system could be improved by:
-
-- Adding a vector database so the AI can learn from previously solved tickets  
-- Implementing authentication and role-based access control  
-- Using PostgreSQL instead of SQLite for better scalability  
-- Improving analytics to track employee performance and resolution time
-
-
-### USER DASHBOARD
-<img width="1800" height="1000" alt="image" src="https://github.com/user-attachments/assets/c1783438-a387-4829-9498-7af4768fdced" />
-
-
-
-
-## ADMIN PORTAL
-<img width="2000" height="1000" alt="image" src="https://github.com/user-attachments/assets/f4b4e138-3d15-46b0-9320-a913344d625a" />
+1. 🧠 **Vector DB & RAG (Retrieval-Augmented Generation)**:
+   - Integrate ChromaDB or FAISS vector database to store embeddings of all resolved tickets and internal documentation.
+   - Enables semantic similarity search so the AI learns from past human resolutions to answer complex technical queries automatically.
+2. 🔐 **Enterprise Single Sign-On (SSO)**:
+   - SAML 2.0 / OpenID Connect integration for Okta, Azure AD, and Google Workspace.
+3. 🐘 **PostgreSQL & Redis Caching**:
+   - Migrate database layer to PostgreSQL with Redis caching for high-concurrency enterprise workloads.
+4. 📧 **Inbound Email Ingestion Gateway**:
+   - Parse incoming support emails (`support@company.com`) via IMAP/SendGrid Webhooks directly into AI tickets.
 
 ---
 
 Made with ❤️ by Aditya Singh
-
-
-
-
-

@@ -22,7 +22,126 @@ from ai_service import analyze_ticket
 from routing_engine import route_ticket
 from assignee_engine import suggest_assignee, find_alternative_assignee
 
+import os
+import json
+import urllib.request
+
 router = APIRouter(prefix="/api/tickets", tags=["Tickets"])
+
+
+# ─── SLA & Notification Helpers ─────────────────────────────────────
+
+SLA_HOURS = {
+    "Critical": 2,
+    "High": 6,
+    "Medium": 24,
+    "Low": 48,
+}
+
+
+def _compute_sla_due_at(created_at: datetime, severity: str) -> datetime:
+    hours = SLA_HOURS.get(severity, 24)
+    if created_at is None:
+        created_at = datetime.now(timezone.utc)
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return created_at + timedelta(hours=hours)
+
+
+def _compute_sla_status(ticket: Ticket) -> str:
+    if ticket.status in ["Resolved", "Closed"]:
+        return "resolved"
+
+    due_at = ticket.sla_due_at
+    if not due_at:
+        created = ticket.created_at or datetime.now(timezone.utc)
+        due_at = _compute_sla_due_at(created, ticket.severity or "Medium")
+
+    now = datetime.now(timezone.utc)
+    if due_at.tzinfo is None:
+        due_at = due_at.replace(tzinfo=timezone.utc)
+
+    time_left = (due_at - now).total_seconds()
+    if time_left < 0:
+        return "breached"
+    elif time_left < 3600:  # less than 1 hour remaining
+        return "at_risk"
+    else:
+        return "on_track"
+
+
+def _format_ticket_response(ticket: Ticket) -> TicketResponse:
+    resp = TicketResponse.model_validate(ticket)
+    if ticket.assignee:
+        resp.assignee_name = ticket.assignee.name
+        resp.assignee_availability = ticket.assignee.availability
+    resp.replies = [ReplyResponse.model_validate(r) for r in (ticket.replies or [])]
+
+    # Compute SLA
+    if not ticket.sla_due_at and ticket.created_at:
+        ticket.sla_due_at = _compute_sla_due_at(ticket.created_at, ticket.severity or "Medium")
+    resp.sla_due_at = ticket.sla_due_at
+    resp.sla_status = _compute_sla_status(ticket)
+    return resp
+
+
+def _send_slack_notification(ticket: Ticket, title_prefix: str = "New Ticket Alert"):
+    webhook_url = None
+    try:
+        from database import SessionLocal
+        from models import SystemSetting
+        db = SessionLocal()
+        try:
+            rec = db.query(SystemSetting).filter(SystemSetting.key == "slack_webhook_url").first()
+            if rec and rec.value and rec.value.strip():
+                webhook_url = rec.value.strip()
+        finally:
+            db.close()
+    except Exception:
+        pass
+
+    if not webhook_url:
+        webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+
+    if not webhook_url or not webhook_url.startswith("http"):
+        return
+
+    payload = {
+        "text": f"🚨 *{title_prefix}*: #{ticket.id} - {ticket.title}",
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"{title_prefix}: Ticket #{ticket.id}",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Title:*\n{ticket.title}"},
+                    {"type": "mrkdwn", "text": f"*Severity:*\n{ticket.severity}"},
+                    {"type": "mrkdwn", "text": f"*Department:*\n{ticket.department or 'Unassigned'}"},
+                    {"type": "mrkdwn", "text": f"*Category:*\n{ticket.category or 'General'}"}
+                ]
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Description:*\n{ticket.description[:200]}..."
+                }
+            }
+        ]
+    }
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(webhook_url, data=data, headers={'Content-Type': 'application/json'})
+        urllib.request.urlopen(req, timeout=3)
+    except Exception as e:
+        print(f"[Slack Webhook] Post error: {e}")
+
 
 
 # ─── Auto-Resolution Templates ───────────────────────────────────────
@@ -194,6 +313,7 @@ async def create_ticket(ticket_data: TicketCreate, db: Session = Depends(get_db)
     ticket.suggested_employee = ai_result.suggested_employee
     ticket.confidence_score = ai_result.confidence_score
     ticket.estimated_resolution_time = ai_result.estimated_resolution_time
+    ticket.sla_due_at = _compute_sla_due_at(datetime.now(timezone.utc), ai_result.severity or "Medium")
 
     _add_timeline(
         db, ticket.id, "ai_analysis",
@@ -225,6 +345,7 @@ async def create_ticket(ticket_data: TicketCreate, db: Session = Depends(get_db)
         )
         ticket.department = routing["department"]
         ticket.severity = routing["severity"]
+        ticket.sla_due_at = _compute_sla_due_at(datetime.now(timezone.utc), routing["severity"] or "Medium")
 
         _add_timeline(
             db, ticket.id, "routed",
@@ -258,16 +379,13 @@ async def create_ticket(ticket_data: TicketCreate, db: Session = Depends(get_db)
                 "status_change"
             )
 
+    # Dispatch Slack Notification for new tickets
+    _send_slack_notification(ticket, "New Ticket Submitted")
+
     db.commit()
     db.refresh(ticket)
 
-    # Add assignee name and replies for response
-    resp = TicketResponse.model_validate(ticket)
-    if ticket.assignee:
-        resp.assignee_name = ticket.assignee.name
-        resp.assignee_availability = ticket.assignee.availability
-    resp.replies = [ReplyResponse.model_validate(r) for r in (ticket.replies or [])]
-    return resp
+    return _format_ticket_response(ticket)
 
 
 @router.get("/", response_model=List[TicketResponse])
@@ -276,6 +394,7 @@ def list_tickets(
     department: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
+    sla_status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     user_email: Optional[str] = Query(None),
     skip: int = 0,
@@ -302,17 +421,10 @@ def list_tickets(
         )
 
     tickets = query.order_by(desc(Ticket.created_at)).offset(skip).limit(limit).all()
-
-    results = []
-    for t in tickets:
-        resp = TicketResponse.model_validate(t)
-        if t.assignee:
-            resp.assignee_name = t.assignee.name
-            resp.assignee_availability = t.assignee.availability
-        resp.replies = [ReplyResponse.model_validate(r) for r in (t.replies or [])]
-        results.append(resp)
-
-    return results
+    formatted = [_format_ticket_response(t) for t in tickets]
+    if sla_status:
+        formatted = [t for t in formatted if t.sla_status == sla_status]
+    return formatted
 
 
 @router.get("/{ticket_id}", response_model=TicketResponse)
@@ -322,12 +434,7 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    resp = TicketResponse.model_validate(ticket)
-    if ticket.assignee:
-        resp.assignee_name = ticket.assignee.name
-        resp.assignee_availability = ticket.assignee.availability
-    resp.replies = [ReplyResponse.model_validate(r) for r in (ticket.replies or [])]
-    return resp
+    return _format_ticket_response(ticket)
 
 
 @router.patch("/{ticket_id}/status")
@@ -669,3 +776,50 @@ def reply_feedback(ticket_id: int, reply_id: int, feedback: ReplyFeedback, db: S
     db.commit()
     return {"message": "Feedback recorded", "is_helpful": feedback.is_helpful}
 
+
+@router.post("/{ticket_id}/generate-reply")
+async def generate_reply_for_ticket(ticket_id: int, db: Session = Depends(get_db)):
+    """Generate an AI draft reply for support employees to respond to a ticket."""
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    replies_summary = "\n".join([f"{r.author_name}: {r.content}" for r in (ticket.replies or [])])
+    from ai_service import generate_ai_reply_draft
+
+    draft = await generate_ai_reply_draft(
+        title=ticket.title,
+        description=ticket.description,
+        category=ticket.category or "General",
+        severity=ticket.severity or "Medium",
+        replies_summary=replies_summary,
+    )
+    return {"draft": draft}
+
+
+@router.post("/reset-seed")
+async def reset_seed_data(db: Session = Depends(get_db)):
+    """Clear demo tickets and re-populate with fresh seed ticket data."""
+    try:
+        db.query(TicketReply).delete()
+        db.query(TicketNote).delete()
+        db.query(TicketTimeline).delete()
+        db.query(Notification).delete()
+        db.query(Feedback).delete()
+        db.query(Ticket).delete()
+        db.query(Employee).update({Employee.current_ticket_load: 0})
+        db.commit()
+
+        from seed_data import EXAMPLE_TICKETS
+        for t_data in EXAMPLE_TICKETS:
+            tc = TicketCreate(
+                title=t_data["title"],
+                description=t_data["description"],
+                user_email=t_data["user_email"]
+            )
+            await create_ticket(tc, db)
+
+        return {"message": "Demo data reset successfully", "ticket_count": len(EXAMPLE_TICKETS)}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to reset seed data: {str(e)}")

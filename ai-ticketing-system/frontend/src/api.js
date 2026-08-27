@@ -50,6 +50,8 @@ export const ticketApi = {
   giveReplyFeedback: (id, replyId, data) => request(`/tickets/${id}/replies/${replyId}/feedback`, { method: 'PATCH', body: JSON.stringify(data) }),
   getNotifications: (id) => request(`/tickets/${id}/notifications`),
   checkEscalations: () => request('/tickets/check-escalations', { method: 'POST' }),
+  generateAIReply: (id) => request(`/tickets/${id}/generate-reply`, { method: 'POST' }),
+  resetSeedData: () => request('/tickets/reset-seed', { method: 'POST' }),
 };
 
 // ─── Employees ───────────────────────────────────────────
@@ -78,6 +80,14 @@ export const analyticsApi = {
   severityDistribution: () => request('/analytics/severity-distribution'),
   resolutionTrend: () => request('/analytics/resolution-trend'),
   employeePerformance: () => request('/analytics/employee-performance'),
+};
+
+// ─── Settings & Integrations ────────────────────────────
+
+export const settingsApi = {
+  get: () => request('/settings/'),
+  update: (data) => request('/settings/', { method: 'POST', body: JSON.stringify(data) }),
+  testSlack: (webhook_url) => request('/settings/test-slack', { method: 'POST', body: JSON.stringify({ webhook_url }) }),
 };
 
 // ─── Health ──────────────────────────────────────────────
