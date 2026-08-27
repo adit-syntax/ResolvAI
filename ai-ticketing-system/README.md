@@ -188,11 +188,16 @@ npm run dev
 You can configure integrations in **two ways**:
 
 1. **Via Web UI (Recommended)**: Click **"⚙️ Integrations & AI"** in the sidebar. Enter your Groq API key or Slack Webhook URL directly from your browser. Settings are saved securely to SQLite.
-2. **Via `.env` File**:
-   ```env
-   GROQ_API_KEY=gsk_your_groq_api_key_here
-   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T000/B000/XXXXX
-   ```
+2. **Via `.env` Files**:
+   - **Backend (`backend/.env`)**:
+     ```env
+     GROQ_API_KEY=gsk_your_groq_api_key_here
+     SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T000/B000/XXXXX
+     ```
+   - **Frontend (`frontend/.env`)**:
+     ```env
+     VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+     ```
 
 ---
 
