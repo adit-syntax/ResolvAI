@@ -209,10 +209,12 @@ function loadAuth() {
 
 function saveAuth(role, email) {
   sessionStorage.setItem(AUTH_KEY, JSON.stringify({ role, email }));
+  localStorage.setItem('userEmail', email);
 }
 
 function clearAuth() {
   sessionStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem('userEmail');
 }
 
 // ─── App ─────────────────────────────────────────────────
@@ -259,8 +261,8 @@ export default function App() {
           ) : (
             /* ── User routes ── */
             <>
-              <Route path="/" element={<UserPortal />} />
-              <Route path="/my-tickets" element={<UserPortal />} />
+              <Route path="/" element={<UserPortal userEmail={email} />} />
+              <Route path="/my-tickets" element={<UserPortal userEmail={email} />} />
               {/* Catch-all → redirect user to portal */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </>

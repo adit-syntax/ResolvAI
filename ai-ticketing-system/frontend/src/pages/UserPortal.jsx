@@ -95,12 +95,21 @@ const fmtDateFull = (d) => {
 //  Main Component
 // ────────────────────────────────────────────────────────────
 
-export default function UserPortal() {
+export default function UserPortal({ userEmail }) {
   const location = useLocation();
 
   // Auth
-  const [email, setEmail] = useState(localStorage.getItem('userEmail') || '');
-  const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('userEmail'));
+  const initialEmail = userEmail || localStorage.getItem('userEmail') || '';
+  const [email, setEmail] = useState(initialEmail);
+  const [loggedIn, setLoggedIn] = useState(!!initialEmail);
+
+  useEffect(() => {
+    if (userEmail) {
+      setEmail(userEmail);
+      setLoggedIn(true);
+      localStorage.setItem('userEmail', userEmail);
+    }
+  }, [userEmail]);
 
   // Tickets
   const [tickets, setTickets] = useState([]);
