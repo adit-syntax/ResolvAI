@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, Clock, Loader2, RefreshCw, MessageSquare,
   X, Send, ChevronRight, User, Tag, Inbox, SlidersHorizontal,
-  Sparkles, AlertTriangle
+  Sparkles, AlertTriangle, Download
 } from 'lucide-react';
 import { ticketApi } from '../api.js';
 
@@ -17,6 +17,43 @@ import { ticketApi } from '../api.js';
 const STATUSES   = ['', 'New', 'Assigned', 'In Progress', 'Pending Info', 'Resolved', 'Closed'];
 const SEVERITIES = ['', 'Critical', 'High', 'Medium', 'Low'];
 const CATEGORIES = ['', 'Billing', 'Bug', 'Access', 'HR', 'Server', 'DB', 'Feature', 'Other'];
+const SLA_STATUSES = [
+  { value: '', label: 'All SLA Statuses' },
+  { value: 'breached', label: 'SLA Breached 🚨' },
+  { value: 'at_risk', label: 'SLA < 1h ⏱️' },
+  { value: 'on_track', label: 'SLA On Track 💙' },
+  { value: 'resolved', label: 'SLA Met ✓' },
+];
+
+const exportToCSV = (ticketList) => {
+  if (!ticketList || ticketList.length === 0) {
+    alert('No tickets available to export.');
+    return;
+  }
+  const headers = ['ID', 'Title', 'User Email', 'Category', 'Severity', 'Department', 'Assignee', 'Status', 'SLA Status', 'Created At'];
+  const rows = ticketList.map(t => [
+    t.id,
+    `"${(t.title || '').replace(/"/g, '""')}"`,
+    t.user_email || '',
+    t.category || '',
+    t.severity || '',
+    t.department || '',
+    t.assignee_name || '',
+    t.status || '',
+    t.sla_status || '',
+    t.created_at || ''
+  ]);
+
+  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `resolvai_tickets_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 // ─── Status config: label + color system ───────────────────────────────────
 const STATUS_CONFIG = {
@@ -66,13 +103,45 @@ function SeverityPill({ severity }) {
   );
 }
 
+function SLABadge({ slaStatus }) {
+  if (!slaStatus || slaStatus === 'resolved') {
+    return (
+      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 font-mono">
+        ✓ SLA Met
+      </span>
+    );
+  }
+
+  if (slaStatus === 'breached') {
+    return (
+      <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1 font-mono animate-pulse">
+        <AlertTriangle className="w-3 h-3 text-red-400" /> SLA Breached
+      </span>
+    );
+  }
+
+  if (slaStatus === 'at_risk') {
+    return (
+      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-mono">
+        <Clock className="w-3 h-3 text-amber-400" /> SLA &lt; 1h
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 font-mono">
+      <Clock className="w-3 h-3 text-blue-400" /> SLA On Track
+    </span>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export default function TicketList() {
   const navigate = useNavigate();
   const [tickets, setTickets]       = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [filters, setFilters]       = useState({ status: '', severity: '', category: '', department: '', search: '' });
+  const [filters, setFilters]       = useState({ status: '', severity: '', category: '', department: '', sla_status: '', search: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [replyModal, setReplyModal] = useState({ show: false, ticket: null, text: '', loading: false });
 
@@ -144,6 +213,14 @@ export default function TicketList() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => exportToCSV(tickets)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+            title="Export Filtered Tickets to CSV"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+          <button
             onClick={fetchTickets}
             className="p-2 rounded-lg border border-white/5 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
             title="Refresh"
@@ -197,7 +274,7 @@ export default function TicketList() {
       {/* ── Filters Panel ─────────────────────────────────────────────── */}
       {showFilters && (
         <div className="glass-card p-5 mb-5 animate-slide-up">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
               <select
@@ -231,13 +308,24 @@ export default function TicketList() {
                 {CATEGORIES.map(c => <option key={c} value={c}>{c || 'All Categories'}</option>)}
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">SLA Condition</label>
+              <select
+                value={filters.sla_status || ''}
+                onChange={(e) => setFilters({ ...filters, sla_status: e.target.value })}
+                className="input-field text-sm py-2"
+                id="filter-sla-status"
+              >
+                {SLA_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={handleFilter} className="btn-primary text-sm py-2 px-6">
               Apply Filters
             </button>
             <button
-              onClick={() => { setFilters({ status: '', severity: '', category: '', department: '', search: '' }); }}
+              onClick={() => { setFilters({ status: '', severity: '', category: '', department: '', sla_status: '', search: '' }); }}
               className="text-sm text-gray-400 hover:text-white transition-colors"
             >
               Clear all
@@ -303,8 +391,10 @@ export default function TicketList() {
                   </div>
                 </div>
 
-                {/* ── Right: Status Badge ───────────────────── */}
-                <div className="flex items-center gap-4 flex-shrink-0">
+                {/* ── Right: Status & SLA Badges ───────────────────── */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <SLABadge slaStatus={ticket.sla_status} />
+                  <SeverityPill severity={ticket.severity} />
                   <StatusPill status={ticket.status} />
                   <ChevronRight className="w-5 h-5 text-[#A1A1A1] hidden sm:block opacity-50 group-hover:opacity-100 transition-opacity" />
                 </div>
