@@ -78,7 +78,7 @@ export default function EmployeeDirectory() {
           name:      form.name,
           email:     form.email.toLowerCase(),
           password:  login_password,
-          role:      'user',   // employees log in as user-role (portal view)
+          role:      'admin',   // employees log in with staff/admin role
           isEmployee: true,
           createdAt: new Date().toISOString(),
         });
@@ -102,15 +102,40 @@ export default function EmployeeDirectory() {
   };
 
   const handleDeactivate = async (id, name) => {
-    if (!confirm(`Deactivate ${name}?`)) return;
+    if (!confirm(`Deactivate ${name}?\n\nAny open tickets assigned to them will be automatically reassigned to the next best available agent.`)) return;
     try {
-      await employeeApi.deactivate(id);
+      const result = await employeeApi.deactivate(id);
       fetchEmployees();
+
+      const reassigned = result.reassigned_tickets || [];
+      const unassigned = result.unassigned_tickets || [];
+
+      if (reassigned.length === 0 && unassigned.length === 0) {
+        alert(`✅ ${name} has been deactivated.\nNo open tickets were assigned to them.`);
+      } else {
+        let msg = `✅ ${name} has been deactivated.\n\n`;
+
+        if (reassigned.length > 0) {
+          msg += `🔄 ${reassigned.length} ticket(s) auto-reassigned:\n`;
+          reassigned.forEach(t => {
+            msg += `  • Ticket #${t.ticket_id} → ${t.new_assignee}\n`;
+          });
+        }
+
+        if (unassigned.length > 0) {
+          msg += `\n⚠️ ${unassigned.length} ticket(s) returned to queue (no available agent found):\n`;
+          unassigned.forEach(t => {
+            msg += `  • Ticket #${t.ticket_id}: ${t.ticket_title}\n`;
+          });
+        }
+
+        alert(msg);
+      }
     } catch (err) { alert(err.message); }
   };
 
   const handleViewTicket = (ticketId) => {
-    navigate(`/tickets/${ticketId}?scroll=agent-response`);
+    navigate(`/tickets/${ticketId}`);
   };
 
   // ─── Availability color logic ─────────────────────────────
@@ -355,10 +380,12 @@ export default function EmployeeDirectory() {
                       <p className="text-xs text-gray-400">{emp.role}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${getAvailabilityColor(emp)} ${hasActive ? 'animate-pulse' : ''}`} />
-                    <span className={`text-xs ${getAvailabilityTextColor(emp)}`}>{getAvailabilityLabel(emp)}</span>
-                  </div>
+                  {!hasActive && (
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full ${getAvailabilityColor(emp)}`} />
+                      <span className={`text-xs ${getAvailabilityTextColor(emp)}`}>{getAvailabilityLabel(emp)}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Active Ticket Info */}

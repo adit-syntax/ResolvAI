@@ -10,6 +10,7 @@ import {
   Headphones, ListTodo, Users, BarChart3,
   Menu, CircleDot, LogOut, User, ShieldCheck, FileText, Settings
 } from 'lucide-react';
+import { getAuthToken, setAuthToken, clearAuthToken, decodeJwtPayload } from './api.js';
 
 // Components & Pages
 import ResolvAiLogo from './components/ResolvAiLogo.jsx';
@@ -27,6 +28,11 @@ import Analytics from './pages/Analytics.jsx';
 const userNavItems = [
   { path: '/', icon: Headphones, label: 'Support Portal' },
   { path: '/my-tickets', icon: FileText, label: 'My Tickets' },
+];
+
+const employeeNavItems = [
+  { path: '/tickets', icon: ListTodo, label: 'Ticket Management' },
+  { path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard' },
 ];
 
 const adminNavItems = [
@@ -60,12 +66,32 @@ function NavItem({ path, icon: Icon, label, onClose }) {
 
 // ─── Sidebar ─────────────────────────────────────────────
 
-// ─── Sidebar ─────────────────────────────────────────────
-
 function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
   const isAdmin = role === 'admin';
-  const navItems = isAdmin ? adminNavItems : userNavItems;
-  const sectionLabel = isAdmin ? 'Admin' : 'User';
+  const isEmployee = role === 'employee';
+  
+  let navItems = userNavItems;
+  let sectionLabel = 'User';
+  let badgeColor = 'bg-[#22c55e]/10 border-[#22c55e]/20';
+  let iconColor = 'text-[#22c55e]';
+  let label = 'User';
+  let Icon = User;
+
+  if (isAdmin) {
+    navItems = adminNavItems;
+    sectionLabel = 'Admin';
+    badgeColor = 'bg-blue-500/10 border-blue-500/20';
+    iconColor = 'text-blue-400';
+    label = 'Administrator';
+    Icon = ShieldCheck;
+  } else if (isEmployee) {
+    navItems = employeeNavItems;
+    sectionLabel = 'Employee';
+    badgeColor = 'bg-purple-500/10 border-purple-500/20';
+    iconColor = 'text-purple-400';
+    label = 'Support Staff';
+    Icon = Headphones;
+  }
 
   return (
     <>
@@ -94,14 +120,11 @@ function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
 
         {/* Role badge */}
         <div className="px-4 py-3 border-b border-[#1a1a1a]">
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isAdmin ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-[#22c55e]/10 border border-[#22c55e]/20'}`}>
-            {isAdmin
-              ? <ShieldCheck className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-              : <User className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0" />
-            }
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${badgeColor}`}>
+            <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${iconColor}`} />
             <div className="min-w-0">
-              <p className={`text-[10px] font-semibold uppercase tracking-wider ${isAdmin ? 'text-blue-400' : 'text-[#22c55e]'}`}>
-                {isAdmin ? 'Administrator' : 'User'}
+              <p className={`text-[10px] font-semibold uppercase tracking-wider ${iconColor}`}>
+                {label}
               </p>
               <p className="text-[10px] text-neutral-500 truncate">{email}</p>
             </div>
@@ -127,13 +150,8 @@ function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-purple-400 hover:bg-purple-500/10 transition-all font-medium border border-white/5"
           >
             <Settings className="w-4 h-4 text-purple-400" />
-            ⚙️ Integrations & AI
+            Integrations &amp; AI
           </button>
-
-          <div className="flex items-center gap-2 px-3 py-1">
-            <div className="w-2 h-2 rounded-full bg-[#22c55e]" />
-            <span className="text-xs text-neutral-500">System Online</span>
-          </div>
 
           <button
             id="sidebar-logout-btn"
@@ -178,7 +196,7 @@ function Layout({ children, role, email, onLogout }) {
           onClick={() => setSettingsOpen(true)}
           className="p-2 rounded-lg text-purple-400 hover:bg-purple-500/10 transition-colors flex items-center gap-1.5 text-xs font-semibold"
         >
-          <Settings className="w-4 h-4" /> ⚙️ Settings
+          <Settings className="w-4 h-4" /> Settings
         </button>
       </div>
 
@@ -195,28 +213,30 @@ function Layout({ children, role, email, onLogout }) {
   );
 }
 
-// ─── Auth helpers ─────────────────────────────────────────
-
-const AUTH_KEY = 'demoAuth';
+// ─── Auth helpers (JWT-based) ─────────────────────────────
 
 function loadAuth() {
-  try {
-    const raw = sessionStorage.getItem(AUTH_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
+  // Read saved JWT from localStorage and decode the payload for role/email
+  const token = getAuthToken();
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  if (!payload) { clearAuthToken(); return null; }
+
+  // Check token expiry (exp is Unix seconds)
+  if (payload.exp && payload.exp * 1000 < Date.now()) {
+    clearAuthToken();
     return null;
   }
+
+  // sub = user DB id, role = role string from token claims
+  // name/email are returned from the login endpoint and stored separately
+  return {
+    role: payload.role || 'user',
+    email: payload.email || localStorage.getItem('userEmail') || '',
+    name:  payload.name  || '',
+  };
 }
 
-function saveAuth(role, email) {
-  sessionStorage.setItem(AUTH_KEY, JSON.stringify({ role, email }));
-  localStorage.setItem('userEmail', email);
-}
-
-function clearAuth() {
-  sessionStorage.removeItem(AUTH_KEY);
-  localStorage.removeItem('userEmail');
-}
 
 // ─── App ─────────────────────────────────────────────────
 
@@ -224,53 +244,61 @@ export default function App() {
   const [auth, setAuth] = useState(() => loadAuth());
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
-  const handleLogin = (role, email) => {
-    saveAuth(role, email);
-    setAuth({ role, email });
+  const handleLogin = (userProfile, token) => {
+    // userProfile = { role, email, name } from the backend response
+    if (token) setAuthToken(token);
+    // Also cache email for quick access elsewhere
+    if (userProfile.email) localStorage.setItem('userEmail', userProfile.email);
+    setAuth({ role: userProfile.role, email: userProfile.email, name: userProfile.name || '' });
   };
 
   const handleLogout = () => {
-    clearAuth();
+    clearAuthToken();
+    localStorage.removeItem('userEmail');
     setAuth(null);
   };
 
-  const content = !auth ? (
-    <Router>
-      <LandingPage onLogin={handleLogin} />
-    </Router>
-  ) : (() => {
-    const { role, email } = auth;
-    const isAdmin = role === 'admin';
-    return (
-      <Router>
-        <Layout role={role} email={email} onLogout={handleLogout}>
-          <Routes>
-            {isAdmin ? (
-              /* ── Admin routes ── */
-              <>
-                <Route path="/tickets" element={<TicketList />} />
-                <Route path="/tickets/:id" element={<TicketDetail />} />
-                <Route path="/employees" element={<EmployeeDirectory />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="*" element={<Navigate to="/tickets" replace />} />
-              </>
-            ) : (
-              /* ── User routes ── */
-              <>
-                <Route path="/" element={<UserPortal userEmail={email} />} />
-                <Route path="/my-tickets" element={<UserPortal userEmail={email} />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            )}
-          </Routes>
-        </Layout>
-      </Router>
-    );
-  })();
+  const handleUpdateEmail = (newEmail) => {
+    if (auth) setAuth({ ...auth, email: newEmail });
+  };
 
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
-      {content}
+      <Router>
+        {!auth ? (
+          <LandingPage onLogin={handleLogin} />
+        ) : (
+          <Layout role={auth.role} email={auth.email} onLogout={handleLogout}>
+            <Routes>
+              {auth.role === 'admin' ? (
+                /* ── Admin routes ── */
+                <>
+                  <Route path="/tickets" element={<TicketList />} />
+                  <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
+                  <Route path="/employees" element={<EmployeeDirectory />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="*" element={<Navigate to="/tickets" replace />} />
+                </>
+              ) : auth.role === 'employee' ? (
+                /* ── Employee routes ── */
+                <>
+                  <Route path="/tickets" element={<TicketList />} />
+                  <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="*" element={<Navigate to="/tickets" replace />} />
+                </>
+              ) : (
+                /* ── User routes ── */
+                <>
+                  <Route path="/" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
+                  <Route path="/my-tickets" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </>
+              )}
+            </Routes>
+          </Layout>
+        )}
+      </Router>
     </GoogleOAuthProvider>
   );
 }

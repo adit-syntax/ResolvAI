@@ -13,6 +13,7 @@ import urllib.request
 
 from database import get_db
 from models import SystemSetting
+from auth_utils import require_admin
 
 router = APIRouter(prefix="/api/settings", tags=["Settings"])
 
@@ -74,8 +75,8 @@ def get_settings(db: Session = Depends(get_db)):
 
 
 @router.post("/")
-def update_settings(data: SettingsUpdate, db: Session = Depends(get_db)):
-    """Update dynamic system settings from Web UI."""
+def update_settings(data: SettingsUpdate, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+    """Update dynamic system settings from Web UI. Admin only."""
     if data.groq_api_key is not None:
         set_setting_value(db, "groq_api_key", data.groq_api_key)
     if data.slack_webhook_url is not None:
@@ -88,8 +89,8 @@ def update_settings(data: SettingsUpdate, db: Session = Depends(get_db)):
 
 
 @router.post("/test-slack")
-def test_slack_webhook(data: TestSlackRequest, db: Session = Depends(get_db)):
-    """Send a test message to the Slack webhook URL to verify connection."""
+def test_slack_webhook(data: TestSlackRequest, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+    """Send a test message to the Slack webhook URL to verify connection. Admin only."""
     webhook_url = data.webhook_url or get_setting_value(db, "slack_webhook_url", "SLACK_WEBHOOK_URL")
     if not webhook_url or not webhook_url.startswith("http"):
         raise HTTPException(status_code=400, detail="Please provide a valid Slack Webhook URL")

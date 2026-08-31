@@ -147,7 +147,7 @@ export default function Analytics() {
               <BarChart data={deptLoad} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="department" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} />
+                <YAxis domain={[0, 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="avg_resolution_time" name="Avg Hours" fill="#525252" radius={[6, 6, 0, 0]} />
               </BarChart>

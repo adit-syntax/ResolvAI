@@ -78,6 +78,7 @@ class TicketResponse(BaseModel):
     sla_due_at: Optional[datetime] = None
     sla_status: Optional[str] = None
     assignee_name: Optional[str] = None
+    assignee_email: Optional[str] = None
     assignee_availability: Optional[str] = None
     replies: List[ReplyResponse] = []
 
@@ -144,6 +145,9 @@ class ReplyCreate(BaseModel):
     author_email: str
     author_name: str
     is_employee_reply: bool = True
+    # Used by backend to authorise the action
+    actor_email: Optional[str] = None   # email of the person submitting
+    actor_role: Optional[str] = None    # 'admin' | 'employee' | 'user'
 
 
 class ReplyFeedback(BaseModel):
@@ -174,15 +178,41 @@ class FeedbackResponse(BaseModel):
 class NoteCreate(BaseModel):
     content: str
     author: str
+    author_email: Optional[str] = None
     is_internal: bool = True
+    note_type: str = "internal"  # 'internal' or 'suggestion'
 
 
 class NoteResponse(BaseModel):
     id: int
     ticket_id: int
     author: str
+    author_email: Optional[str]
     content: str
     is_internal: bool
+    note_type: str
+    created_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Suggestion Schema ───────────────────────────────────────────────
+
+class SuggestionCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    author_name: str
+    author_email: str
+
+
+class SuggestionResponse(BaseModel):
+    id: int
+    ticket_id: int
+    author: str
+    author_email: Optional[str]
+    content: str
+    is_internal: bool
+    note_type: str
     created_at: Optional[datetime]
 
     class Config:

@@ -13,7 +13,7 @@ import {
   MessageSquare, BarChart3, CheckCircle2, ChevronDown, ChevronUp,
   Layers, Lock, Mail, Star, Play, Globe, Cpu, Headphones, X, UserPlus, LogIn, Info
 } from 'lucide-react';
-import { getRegisteredUsers, saveRegisteredUser } from './LoginPage.jsx';
+import { authApi, setAuthToken } from '../api.js';
 
 function GoogleIcon({ className = 'w-4 h-4' }) {
   return (
@@ -28,10 +28,9 @@ function GoogleIcon({ className = 'w-4 h-4' }) {
 
 
 const DEMO_CREDENTIALS = {
-  user: { email: 'user@gmail.com', password: 'user123', role: 'user' },
-  admin: { email: 'admin@gmail.com', password: 'admin123', role: 'admin' },
+  user:  { email: 'user@gmail.com',       password: 'user123'     },
+  admin: { email: 'admin@gmail.com',      password: 'admin123'    },
 };
-
 
 
 export default function LandingPage({ onLogin }) {
@@ -66,8 +65,8 @@ export default function LandingPage({ onLogin }) {
         const info = await res.json();
         const googleEmail = (info.email || '').toLowerCase();
         const googleName  = info.name   || googleEmail.split('@')[0];
-        saveRegisteredUser({ name: googleName, email: googleEmail, password: '', role: 'user', provider: 'google', createdAt: new Date().toISOString() });
-        onLogin('user', googleEmail);
+        // Google OAuth users get a user-role session (no backend JWT issued here)
+        onLogin({ role: 'user', email: googleEmail, name: googleName }, null);
         setShowLoginModal(false);
       } catch {
         setGoogleError('Google sign-in failed. Please try again.');
@@ -81,45 +80,32 @@ export default function LandingPage({ onLogin }) {
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
 
-  const handleQuickLogin = (type) => {
+  const handleQuickLogin = async (type) => {
     const cred = DEMO_CREDENTIALS[type];
-    onLogin(cred.role, cred.email);
+    try {
+      const data = await authApi.login(cred.email, cred.password);
+      setAuthToken(data.access_token);
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+      setShowLoginModal(false);
+    } catch (err) {
+      setLoginError(err.message || 'Demo login failed — is the backend running?');
+    }
   };
 
   const handleFormLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
     setLoginLoading(true);
-
-    await new Promise(r => setTimeout(r, 400));
-
-    const emailTrim = loginEmail.trim().toLowerCase();
-    
-    // 1. Check demo credentials
-    const demoMatch = Object.values(DEMO_CREDENTIALS).find(
-      c => c.email === emailTrim && c.password === loginPassword
-    );
-
-    if (demoMatch) {
-      onLogin(demoMatch.role, demoMatch.email);
+    try {
+      const data = await authApi.login(loginEmail.trim().toLowerCase(), loginPassword);
+      setAuthToken(data.access_token);
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+      setShowLoginModal(false);
+    } catch (err) {
+      setLoginError(err.message || 'Invalid credentials. Please check your email and password.');
+    } finally {
       setLoginLoading(false);
-      return;
     }
-
-    // 2. Check registered users
-    const registered = getRegisteredUsers();
-    const regMatch = registered.find(
-      u => u.email.toLowerCase() === emailTrim && u.password === loginPassword
-    );
-
-    if (regMatch) {
-      onLogin(regMatch.role, regMatch.email);
-      setLoginLoading(false);
-      return;
-    }
-
-    setLoginError('Invalid credentials. If you are an employee, use the credentials provided by your administrator.');
-    setLoginLoading(false);
   };
 
   const handleFormRegister = async (e) => {
@@ -130,41 +116,26 @@ export default function LandingPage({ onLogin }) {
       setRegError('Please enter your full name (at least 2 characters).');
       return;
     }
-
     if (!regEmail.trim().includes('@')) {
       setRegError('Please enter a valid email address.');
       return;
     }
-
     if (regPassword.length < 6) {
       setRegError('Password must be at least 6 characters.');
       return;
     }
 
     setRegLoading(true);
-    await new Promise(r => setTimeout(r, 500));
-
-    const emailTrim = regEmail.trim().toLowerCase();
-    const registered = getRegisteredUsers();
-
-    if (registered.some(u => u.email.toLowerCase() === emailTrim)) {
-      setRegError('An account with this email already exists. Please Sign In.');
+    try {
+      const data = await authApi.register(regName.trim(), regEmail.trim().toLowerCase(), regPassword);
+      setAuthToken(data.access_token);
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+      setShowLoginModal(false);
+    } catch (err) {
+      setRegError(err.message || 'Registration failed. Please try again.');
+    } finally {
       setRegLoading(false);
-      return;
     }
-
-    // Registration always creates an end-user account
-    const newUser = {
-      name: regName.trim(),
-      email: emailTrim,
-      password: regPassword,
-      role: 'user',
-      createdAt: new Date().toISOString(),
-    };
-
-    saveRegisteredUser(newUser);
-    setRegLoading(false);
-    onLogin('user', emailTrim);
   };
 
   const openOverlayWithScenario = (scenarioId) => {

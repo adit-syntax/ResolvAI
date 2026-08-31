@@ -95,7 +95,7 @@ const fmtDateFull = (d) => {
 //  Main Component
 // ────────────────────────────────────────────────────────────
 
-export default function UserPortal({ userEmail }) {
+export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
   const location = useLocation();
 
   // Auth
@@ -235,16 +235,17 @@ export default function UserPortal({ userEmail }) {
     if (!email.trim()) return;
     localStorage.setItem('userEmail', email);
     setLoggedIn(true);
+    if (onUpdateEmail) {
+      onUpdateEmail(email);
+    }
     fetchTickets(email);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('userEmail');
-    setEmail('');
-    setLoggedIn(false);
-    setTickets([]);
-    setActiveTicket(null);
-    setAiSuggestionTicket(null);
+    if (onLogout) {
+      onLogout();
+    }
   };
 
   // File handling
@@ -414,46 +415,8 @@ export default function UserPortal({ userEmail }) {
   const previousTickets = tickets.filter(t => ['Resolved', 'Closed'].includes(t.status));
   const isTicketReadOnly = activeTicket && ['Resolved', 'Closed'].includes(activeTicket.status);
 
-  // ──────────────────────────────────────────────────────────
-  //  VIEW 1 — Email Login
-  // ──────────────────────────────────────────────────────────
-
-  if (!loggedIn) {
-    return (
-      <div className="animate-fade-in flex items-center justify-center min-h-[70vh]">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center mx-auto mb-4">
-              <MessageSquare className="w-8 h-8 text-[#22c55e]" />
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">User Portal</h1>
-            <p className="text-neutral-400 text-sm">AI-powered support at your fingertips</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="glass-card p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Your Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-                <input
-                  type="email"
-                  required
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-field pl-10"
-                  id="portal-email"
-                />
-              </div>
-            </div>
-            <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3" id="portal-login-btn">
-              <ArrowRight className="w-4 h-4" />
-              Enter Support Portal
-            </button>
-          </form>
-        </div>
-      </div>
-    );
+  if (!email) {
+    return null;
   }
 
   // ──────────────────────────────────────────────────────────

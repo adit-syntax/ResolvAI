@@ -3,8 +3,11 @@
  *
  * Access Rules:
  *   - End-User  : Self-registers here → Support Portal
- *   - Employee  : Account created by Admin in Employee Directory → logs in here
+ *   - Employee  : Account created by Admin → logs in here
  *   - Admin     : Pre-seeded demo credential only → Admin Dashboard
+ *
+ * Auth: All login/register calls go to the real backend (/api/auth/login,
+ * /api/auth/register). No credentials are stored or validated in the browser.
  */
 
 import React, { useState } from 'react';
@@ -12,10 +15,19 @@ import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
 import {
   Mail, Lock, Eye, EyeOff, Sparkles,
-  User, ShieldCheck, AlertTriangle, Zap, UserPlus, LogIn, Info
+  User, ShieldCheck, AlertTriangle, Zap, UserPlus, LogIn, Info, Headphones,
+  Loader2
 } from 'lucide-react';
+import { authApi, setAuthToken } from '../api.js';
 
-// Google icon SVG component
+// ── Demo credentials (sent to real API with bcrypt-hashed passwords in DB) ────
+const DEMO_CREDENTIALS = {
+  user:     { email: 'user@gmail.com',      password: 'user123',     role: 'user'     },
+  admin:    { email: 'admin@gmail.com',     password: 'admin123',    role: 'admin'    },
+  employee: { email: 'employee@company.com',password: 'employee123', role: 'employee' },
+};
+
+// Google icon
 function GoogleIcon({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24">
@@ -27,33 +39,6 @@ function GoogleIcon({ className = 'w-4 h-4' }) {
   );
 }
 
-// ── Demo credentials (pre-seeded) ─────────────────────────────────────────────
-const DEMO_CREDENTIALS = {
-  user:  { email: 'user@gmail.com',  password: 'user123',  role: 'user'  },
-  admin: { email: 'admin@gmail.com', password: 'admin123', role: 'admin' },
-};
-
-// ── LocalStorage helpers (shared with EmployeeDirectory) ─────────────────────
-export function getRegisteredUsers() {
-  try {
-    const raw = localStorage.getItem('resolv_registered_users');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveRegisteredUser(userObj) {
-  const users = getRegisteredUsers();
-  const existing = users.findIndex(u => u.email.toLowerCase() === userObj.email.toLowerCase());
-  if (existing >= 0) {
-    users[existing] = userObj; // update if already exists
-  } else {
-    users.push(userObj);
-  }
-  localStorage.setItem('resolv_registered_users', JSON.stringify(users));
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function LoginPage({ onLogin }) {
@@ -61,67 +46,41 @@ export default function LoginPage({ onLogin }) {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   // Login form
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError]           = useState('');
-  const [loading, setLoading]       = useState(false);
+  const [error, setError]               = useState('');
+  const [loading, setLoading]           = useState(false);
 
-  // Registration form (end-user only)
-  const [regName, setRegName]         = useState('');
-  const [regEmail, setRegEmail]       = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regError, setRegError]       = useState('');
-  const [regLoading, setRegLoading]   = useState(false);
+  // Register form
+  const [regName, setRegName]           = useState('');
+  const [regEmail, setRegEmail]         = useState('');
+  const [regPassword, setRegPassword]   = useState('');
+  const [regError, setRegError]         = useState('');
+  const [regLoading, setRegLoading]     = useState(false);
 
-  // ── Google OAuth ────────────────────────────────────────────────────────────
-  const [googleError, setGoogleError] = useState('');
+  // Google OAuth
+  const [googleError, setGoogleError]   = useState('');
 
-  const handleGoogleSuccess = (tokenResponse) => {
+  // ── Google OAuth ─────────────────────────────────────────────────────────────
+
+  const handleGoogleSuccess = (info) => {
     setGoogleError('');
-    // Decode the JWT id_token to get user info
-    try {
-      const base64Url = tokenResponse.credential || '';
-      const base64 = base64Url.split('.')[1];
-      const payload = JSON.parse(atob(base64));
-      const googleEmail = (payload.email || '').toLowerCase();
-      const googleName  = payload.name  || googleEmail.split('@')[0];
-
-      // Create / update the user entry in localStorage
-      saveRegisteredUser({
-        name:      googleName,
-        email:     googleEmail,
-        password:  '',          // no password for OAuth users
-        role:      'user',
-        provider:  'google',
-        createdAt: new Date().toISOString(),
-      });
-      onLogin('user', googleEmail);
-    } catch {
-      setGoogleError('Could not read Google account info. Please try email login.');
-    }
+    const googleEmail = (info.email || '').toLowerCase();
+    const googleName  = info.name || googleEmail.split('@')[0];
+    // Google OAuth users get a synthetic "user" session — no JWT from our backend
+    // In a real app you'd exchange the Google token at the backend for a JWT
+    onLogin({ role: 'user', email: googleEmail, name: googleName }, null);
   };
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       try {
-        // Fetch user info from Google
         const res  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${codeResponse.access_token}` },
         });
         const info = await res.json();
-        const googleEmail = (info.email || '').toLowerCase();
-        const googleName  = info.name   || googleEmail.split('@')[0];
-
-        saveRegisteredUser({
-          name:      googleName,
-          email:     googleEmail,
-          password:  '',
-          role:      'user',
-          provider:  'google',
-          createdAt: new Date().toISOString(),
-        });
-        onLogin('user', googleEmail);
+        handleGoogleSuccess(info);
       } catch {
         setGoogleError('Google sign-in failed. Please try again.');
       }
@@ -130,83 +89,48 @@ export default function LoginPage({ onLogin }) {
     flow: 'implicit',
   });
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // ── Sign In ──────────────────────────────────────────────────────────────────
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    await new Promise(r => setTimeout(r, 400));
 
-    const emailTrim = email.trim().toLowerCase();
-
-    // 1. Demo credentials
-    const demoMatch = Object.values(DEMO_CREDENTIALS).find(
-      c => c.email === emailTrim && c.password === password
-    );
-    if (demoMatch) {
-      onLogin(demoMatch.role, demoMatch.email);
+    try {
+      const data = await authApi.login(email.trim().toLowerCase(), password);
+      // Store the JWT — api.js will attach it to every future request
+      setAuthToken(data.access_token);
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // 2. Registered users (end-users self-registered + employees added by Admin)
-    const registered = getRegisteredUsers();
-    const regMatch = registered.find(
-      u => u.email.toLowerCase() === emailTrim && u.password === password
-    );
-    if (regMatch) {
-      onLogin(regMatch.role, regMatch.email);
-      setLoading(false);
-      return;
-    }
-
-    setError('Invalid credentials. If you are an employee, use the credentials provided by your administrator.');
-    setLoading(false);
   };
+
+  // ── Register ─────────────────────────────────────────────────────────────────
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setRegError('');
 
-    if (regName.trim().length < 2) {
-      setRegError('Please enter your full name.');
-      return;
-    }
-    if (!regEmail.trim().includes('@')) {
-      setRegError('Please enter a valid email address.');
-      return;
-    }
-    if (regPassword.length < 6) {
-      setRegError('Password must be at least 6 characters.');
-      return;
-    }
+    if (regName.trim().length < 2) { setRegError('Please enter your full name.'); return; }
+    if (!regEmail.trim().includes('@')) { setRegError('Please enter a valid email.'); return; }
+    if (regPassword.length < 6) { setRegError('Password must be at least 6 characters.'); return; }
 
     setRegLoading(true);
-    await new Promise(r => setTimeout(r, 400));
-
-    const emailTrim = regEmail.trim().toLowerCase();
-    const registered = getRegisteredUsers();
-
-    if (registered.some(u => u.email.toLowerCase() === emailTrim)) {
-      setRegError('An account with this email already exists. Please Sign In.');
+    try {
+      const data = await authApi.register(regName.trim(), regEmail.trim().toLowerCase(), regPassword);
+      setAuthToken(data.access_token);
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+    } catch (err) {
+      setRegError(err.message || 'Registration failed. Please try again.');
+    } finally {
       setRegLoading(false);
-      return;
     }
-
-    // Registration always creates an end-user account
-    const newUser = {
-      name:      regName.trim(),
-      email:     emailTrim,
-      password:  regPassword,
-      role:      'user',
-      createdAt: new Date().toISOString(),
-    };
-
-    saveRegisteredUser(newUser);
-    setRegLoading(false);
-    onLogin('user', emailTrim);
   };
+
+  // ── Quick Demo Login ──────────────────────────────────────────────────────────
 
   const quickLogin = async (type) => {
     setError('');
@@ -214,12 +138,18 @@ export default function LoginPage({ onLogin }) {
     const cred = DEMO_CREDENTIALS[type];
     setEmail(cred.email);
     setPassword(cred.password);
-    await new Promise(r => setTimeout(r, 400));
-    onLogin(cred.role, cred.email);
-    setLoading(false);
+    try {
+      const data = await authApi.login(cred.email, cred.password);
+      setAuthToken(data.access_token);
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+    } catch (err) {
+      setError(err.message || 'Demo login failed — is the backend running?');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
@@ -247,9 +177,7 @@ export default function LoginPage({ onLogin }) {
             <button
               onClick={() => { setAuthTab('login'); setError(''); }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                authTab === 'login'
-                  ? 'bg-[#22c55e] text-black shadow-md'
-                  : 'text-neutral-400 hover:text-white'
+                authTab === 'login' ? 'bg-[#22c55e] text-black shadow-md' : 'text-neutral-400 hover:text-white'
               }`}
             >
               <LogIn className="w-3.5 h-3.5" /> Sign In
@@ -257,16 +185,14 @@ export default function LoginPage({ onLogin }) {
             <button
               onClick={() => { setAuthTab('register'); setRegError(''); }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                authTab === 'register'
-                  ? 'bg-[#22c55e] text-black shadow-md'
-                  : 'text-neutral-400 hover:text-white'
+                authTab === 'register' ? 'bg-[#22c55e] text-black shadow-md' : 'text-neutral-400 hover:text-white'
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" /> Create Account
             </button>
           </div>
 
-          {/* ── Google OAuth Button ─────────────────────────────────────── */}
+          {/* Google OAuth Button */}
           {googleClientId ? (
             <>
               <button
@@ -292,7 +218,7 @@ export default function LoginPage({ onLogin }) {
             <div className="flex items-start gap-2 bg-neutral-800/40 border border-neutral-700/40 rounded-xl px-3 py-2.5 mb-5">
               <Info className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0 mt-0.5" />
               <p className="text-[10px] text-neutral-500 leading-relaxed">
-                Google OAuth not configured. Set <code className="bg-neutral-800 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> in <code className="bg-neutral-800 px-1 rounded">frontend/.env</code> to enable.
+                Google OAuth not configured. Set <code className="bg-neutral-800 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> to enable.
               </p>
             </div>
           )}
@@ -300,20 +226,16 @@ export default function LoginPage({ onLogin }) {
           {authTab === 'login' ? (
             /* ── SIGN IN FORM ── */
             <form onSubmit={handleLogin} className="space-y-4">
-
-              {/* Employee info note */}
               <div className="flex items-start gap-2 bg-blue-500/8 border border-blue-500/20 rounded-xl px-3 py-2.5">
                 <Info className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] text-blue-300/80 leading-relaxed">
-                  <span className="font-semibold text-blue-300">Employees:</span> use the credentials provided by your administrator.
+                  <span className="font-semibold text-blue-300">Employees:</span> use credentials provided by your administrator.
                   <span className="text-neutral-500 ml-1">Admins: use pre-seeded admin credentials below.</span>
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  Email Address
-                </label>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Email Address</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
                   <input
@@ -329,9 +251,7 @@ export default function LoginPage({ onLogin }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  Password
-                </label>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
                   <input
@@ -366,15 +286,13 @@ export default function LoginPage({ onLogin }) {
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-[#22c55e]/20 mt-2"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</> : 'Sign In'}
               </button>
             </form>
 
           ) : (
             /* ── REGISTER FORM (End-Users only) ── */
             <form onSubmit={handleRegister} className="space-y-3.5">
-
-              {/* Registration scope notice */}
               <div className="flex items-start gap-2 bg-[#22c55e]/8 border border-[#22c55e]/20 rounded-xl px-3 py-2.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] text-[#22c55e]/80 leading-relaxed">
@@ -386,11 +304,8 @@ export default function LoginPage({ onLogin }) {
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1 uppercase tracking-wider">Full Name *</label>
                 <input
-                  type="text"
-                  required
-                  placeholder="John Doe"
-                  value={regName}
-                  onChange={e => setRegName(e.target.value)}
+                  type="text" required placeholder="John Doe"
+                  value={regName} onChange={e => setRegName(e.target.value)}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
                 />
               </div>
@@ -398,11 +313,8 @@ export default function LoginPage({ onLogin }) {
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1 uppercase tracking-wider">Email Address *</label>
                 <input
-                  type="email"
-                  required
-                  placeholder="john@example.com"
-                  value={regEmail}
-                  onChange={e => setRegEmail(e.target.value)}
+                  type="email" required placeholder="john@example.com"
+                  value={regEmail} onChange={e => setRegEmail(e.target.value)}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
                 />
               </div>
@@ -410,12 +322,8 @@ export default function LoginPage({ onLogin }) {
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1 uppercase tracking-wider">Password *</label>
                 <input
-                  type="password"
-                  required
-                  minLength={6}
-                  placeholder="••••••••  (min 6 chars)"
-                  value={regPassword}
-                  onChange={e => setRegPassword(e.target.value)}
+                  type="password" required minLength={6} placeholder="••••••••  (min 6 chars)"
+                  value={regPassword} onChange={e => setRegPassword(e.target.value)}
                   className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
                 />
               </div>
@@ -428,11 +336,10 @@ export default function LoginPage({ onLogin }) {
               )}
 
               <button
-                type="submit"
-                disabled={regLoading}
+                type="submit" disabled={regLoading}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 shadow-lg shadow-[#22c55e]/20 mt-2"
               >
-                {regLoading ? 'Creating Account...' : 'Create My Account'}
+                {regLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating Account...</> : 'Create My Account'}
               </button>
             </form>
           )}
@@ -446,34 +353,46 @@ export default function LoginPage({ onLogin }) {
             <div className="flex-1 h-px bg-[#222222]" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               id="demo-user-btn"
-              onClick={() => quickLogin('user')}
-              disabled={loading}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-[#22c55e]/40 hover:bg-[#22c55e]/5 transition-all group active:scale-[0.97] disabled:opacity-60"
+              onClick={() => quickLogin('user')} disabled={loading}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-[#22c55e]/40 hover:bg-[#22c55e]/5 transition-all group active:scale-[0.97] disabled:opacity-60"
             >
-              <div className="w-9 h-9 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center group-hover:bg-[#22c55e]/20 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center group-hover:bg-[#22c55e]/20 transition-colors">
                 <User className="w-4 h-4 text-[#22c55e]" />
               </div>
               <div className="text-center">
-                <p className="text-xs font-semibold text-white">Demo User</p>
-                <p className="text-[10px] text-neutral-600 mt-0.5">Support Portal</p>
+                <p className="text-xs font-semibold text-white">User</p>
+                <p className="text-[9px] text-neutral-600 mt-0.5">Support Portal</p>
+              </div>
+            </button>
+
+            <button
+              id="demo-employee-btn"
+              onClick={() => quickLogin('employee')} disabled={loading}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group active:scale-[0.97] disabled:opacity-60"
+            >
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                <Headphones className="w-4 h-4 text-purple-400" />
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-semibold text-white">Employee</p>
+                <p className="text-[9px] text-neutral-600 mt-0.5">Ticket Mgt</p>
               </div>
             </button>
 
             <button
               id="demo-admin-btn"
-              onClick={() => quickLogin('admin')}
-              disabled={loading}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group active:scale-[0.97] disabled:opacity-60"
+              onClick={() => quickLogin('admin')} disabled={loading}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group active:scale-[0.97] disabled:opacity-60"
             >
-              <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
                 <ShieldCheck className="w-4 h-4 text-blue-400" />
               </div>
               <div className="text-center">
-                <p className="text-xs font-semibold text-white">Demo Admin</p>
-                <p className="text-[10px] text-neutral-600 mt-0.5">Admin Dashboard</p>
+                <p className="text-xs font-semibold text-white">Admin</p>
+                <p className="text-[9px] text-neutral-600 mt-0.5">Dashboard</p>
               </div>
             </button>
           </div>
@@ -483,3 +402,8 @@ export default function LoginPage({ onLogin }) {
     </div>
   );
 }
+
+// Re-export helpers that EmployeeDirectory previously used from this file
+// (kept for backward compat — they're no-ops now since auth is server-side)
+export function getRegisteredUsers() { return []; }
+export function saveRegisteredUser() {}

@@ -1,6 +1,6 @@
 """
 SQLAlchemy ORM models for the AI Ticketing System.
-Defines: Ticket, Employee, Feedback, TicketNote, TicketTimeline, TicketReply, Notification
+Defines: User, Ticket, Employee, Feedback, TicketNote, TicketTimeline, TicketReply, Notification
 """
 
 from sqlalchemy import (
@@ -18,7 +18,26 @@ def now_ist():
 from database import Base
 
 
-# ─── Enums ────────────────────────────────────────────────────────────
+# ─── User (Authentication) ────────────────────────────────────────────────────
+
+class User(Base):
+    """Authenticated user account. Links to Employee for staff accounts."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(150), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(200), nullable=False)
+    # role: 'admin' | 'employee' | 'user'
+    role = Column(String(20), default="user", nullable=False)
+    # Optional link to the employees table (set for admin/employee accounts)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
+
+
+
 
 class TicketCategory(str, enum.Enum):
     BILLING = "Billing"
@@ -161,14 +180,17 @@ class Feedback(Base):
 
 
 class TicketNote(Base):
-    """Internal notes added by assignees."""
+    """Internal notes added by assignees or suggestions from fellow employees."""
     __tablename__ = "ticket_notes"
 
     id = Column(Integer, primary_key=True, index=True)
     ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=False)
     author = Column(String(100), nullable=False)
+    author_email = Column(String(150), nullable=True)  # email of note author
     content = Column(Text, nullable=False)
     is_internal = Column(Boolean, default=True)
+    # 'internal' = note by assignee/admin | 'suggestion' = comment by fellow employee
+    note_type = Column(String(20), default="internal", nullable=False)
     created_at = Column(DateTime, default=now_ist)
 
     ticket = relationship("Ticket", back_populates="notes")

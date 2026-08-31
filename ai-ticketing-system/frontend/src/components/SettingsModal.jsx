@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   X, Settings, Sparkles, Bell, CheckCircle2, AlertCircle,
-  Eye, EyeOff, ExternalLink, Send, Loader2, Key, ShieldCheck
+  Eye, EyeOff, ExternalLink, Send, Loader2, Key, ShieldCheck, RefreshCw
 } from 'lucide-react';
 import { settingsApi } from '../api.js';
 
@@ -151,7 +151,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
-            <Sparkles className="w-4 h-4" /> 🤖 AI Engine (Groq)
+            <Sparkles className="w-4 h-4" /> AI Engine (Groq)
           </button>
           <button
             onClick={() => setActiveTab('slack')}
@@ -161,7 +161,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
-            <Bell className="w-4 h-4" /> 🔔 Slack Alerts
+            <Bell className="w-4 h-4" /> Slack Alerts
           </button>
           <button
             onClick={() => setActiveTab('demo')}
@@ -171,7 +171,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
-            <RefreshCw className="w-4 h-4" /> 🔄 Demo Data
+            <RefreshCw className="w-4 h-4" /> Demo Data
           </button>
         </div>
 
@@ -355,7 +355,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       ) : (
                         <Send className="w-3.5 h-3.5" />
                       )}
-                      {testingSlack ? 'Sending Test...' : '🧪 Test Slack Connection'}
+                      {testingSlack ? 'Sending Test...' : 'Test Slack Connection'}
                     </button>
                   </div>
                 </div>
@@ -385,7 +385,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       ) : (
                         <RefreshCw className="w-4 h-4" />
                       )}
-                      {resettingDemo ? 'Resetting Demo Tickets...' : '🔄 Restore Fresh Demo Tickets'}
+                    {resettingDemo ? 'Resetting Demo Tickets...' : 'Restore Fresh Demo Tickets'}
                     </button>
                   </div>
                 </div>

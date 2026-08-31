@@ -11,8 +11,13 @@ from datetime import datetime, timezone, timedelta
 from database import get_db
 from models import Ticket, Feedback, Employee
 from schemas import AnalyticsOverview, DepartmentLoad, CategoryCount
+from auth_utils import require_employee_or_admin
 
-router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
+router = APIRouter(
+    prefix="/api/analytics",
+    tags=["Analytics"],
+    dependencies=[Depends(require_employee_or_admin)],
+)
 
 
 @router.get("/overview", response_model=AnalyticsOverview)

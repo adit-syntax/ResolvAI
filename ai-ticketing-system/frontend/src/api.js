@@ -3,6 +3,9 @@
  *
  * In production (Render), VITE_API_URL is set to the backend service URL.
  * In local development, requests go through the Vite dev proxy to localhost:8000.
+ *
+ * Authentication: All requests include the JWT Bearer token from localStorage.
+ * On 401 response the token is cleared and the page reloads to trigger re-login.
  */
 
 let BASE_URL = '/api';
@@ -11,23 +14,93 @@ if (import.meta.env.VITE_API_URL) {
   BASE_URL = apiUrl.startsWith('http') ? `${apiUrl}/api` : `https://${apiUrl}/api`;
 }
 
-async function request(url, options = {}) {
-  const config = {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  };
+// ─── Auth Token Management ────────────────────────────────────────────────────
 
-  const response = await fetch(`${BASE_URL}${url}`, config);
+const TOKEN_KEY = 'resolv_jwt';
+
+export function getAuthToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setAuthToken(token) {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+export function clearAuthToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  // Also clear old sessionStorage keys if present (migration)
+  sessionStorage.removeItem('role');
+  sessionStorage.removeItem('email');
+}
+
+/**
+ * Decode a JWT payload without verification.
+ * Used only to read non-sensitive claims (role, email) from a trusted server-signed token.
+ */
+export function decodeJwtPayload(token) {
+  try {
+    const base64Payload = token.split('.')[1];
+    const payload = JSON.parse(atob(base64Payload));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Core Request ─────────────────────────────────────────────────────────────
+
+async function request(url, options = {}) {
+  const token = getAuthToken();
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${BASE_URL}${url}`, { ...options, headers });
+
+  // Token expired or invalid — log out and reload
+  if (response.status === 401) {
+    clearAuthToken();
+    window.location.reload();
+    return;
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
     throw new Error(error.detail || `HTTP ${response.status}`);
   }
 
+  // 204 No Content
+  if (response.status === 204) return null;
+
   return response.json();
 }
 
-// ─── Tickets ─────────────────────────────────────────────
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export const authApi = {
+  /** Authenticate with email + password. Returns { access_token, role, email, name }. */
+  login: (email, password) =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+
+  /** Self-registration for end users only. Returns { access_token, role, email, name }. */
+  register: (name, email, password) =>
+    request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
+
+  /** Get current user profile. */
+  me: () => request('/auth/me'),
+
+  /** Change current user's password. */
+  changePassword: (current_password, new_password) =>
+    request('/auth/me/password', { method: 'PUT', body: JSON.stringify({ current_password, new_password }) }),
+};
+
+// ─── Tickets ─────────────────────────────────────────────────────────────────
 
 export const ticketApi = {
   create: (data) => request('/tickets/', { method: 'POST', body: JSON.stringify(data) }),
@@ -52,9 +125,12 @@ export const ticketApi = {
   checkEscalations: () => request('/tickets/check-escalations', { method: 'POST' }),
   generateAIReply: (id) => request(`/tickets/${id}/generate-reply`, { method: 'POST' }),
   resetSeedData: () => request('/tickets/reset-seed', { method: 'POST' }),
+  // Suggestions: internal comments from fellow (non-assigned) employees
+  addSuggestion: (id, data) => request(`/tickets/${id}/suggestions`, { method: 'POST', body: JSON.stringify(data) }),
+  getSuggestions: (id) => request(`/tickets/${id}/suggestions`),
 };
 
-// ─── Employees ───────────────────────────────────────────
+// ─── Employees ───────────────────────────────────────────────────────────────
 
 export const employeeApi = {
   list: (params = {}) => {
@@ -71,7 +147,7 @@ export const employeeApi = {
   activeTickets: () => request('/employees/active-tickets'),
 };
 
-// ─── Analytics ───────────────────────────────────────────
+// ─── Analytics ───────────────────────────────────────────────────────────────
 
 export const analyticsApi = {
   overview: () => request('/analytics/overview'),
@@ -82,7 +158,7 @@ export const analyticsApi = {
   employeePerformance: () => request('/analytics/employee-performance'),
 };
 
-// ─── Settings & Integrations ────────────────────────────
+// ─── Settings & Integrations ─────────────────────────────────────────────────
 
 export const settingsApi = {
   get: () => request('/settings/'),
@@ -90,7 +166,7 @@ export const settingsApi = {
   testSlack: (webhook_url) => request('/settings/test-slack', { method: 'POST', body: JSON.stringify({ webhook_url }) }),
 };
 
-// ─── Health ──────────────────────────────────────────────
+// ─── Health ───────────────────────────────────────────────────────────────────
 
 export const healthApi = {
   check: () => request('/health'),
