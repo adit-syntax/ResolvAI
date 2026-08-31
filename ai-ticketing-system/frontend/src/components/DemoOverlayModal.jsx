@@ -63,7 +63,7 @@ const DEMO_SCENARIOS = [
     category: 'DB',
     severity: 'High',
     sentiment: 'Neutral',
-    userMsg: 'Main PostgreSQL analytics query is timing out after 30s during peak hours.',
+    userMsg: 'Main analytics reporting query is timing out after 30s during peak hours.',
     aiSummary: 'Database timeout on analytics reporting query during high concurrency.',
     confidence: '97.4%',
     action: 'Assigned to Database Team (Sarah Chen)',
