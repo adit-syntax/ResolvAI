@@ -139,8 +139,9 @@ graph TD
 | **AI / LLM Engine** | Groq (`llama-3.3-70b-versatile`) | Ultra-fast LLM inference with smart offline fallback mode |
 | **Real-time Engine** | WebSockets (`/ws`) | Live updates for tickets, chat replies, and system notifications |
 | **Notifications** | Slack Incoming Webhooks | Rich alert cards dispatched on urgent tickets or SLA escalations |
-| **Auth & Identity** | JWT (HS256) + bcrypt, Google OAuth | Server-signed tokens (24 h expiry), bcrypt-hashed passwords, role-based access control (`admin` / `employee` / `user`) |
-| **API Protection** | slowapi | Per-IP rate limiting: 100 req/min global, 10 req/min on the login endpoint |
+| **Auth & Identity** | JWT (HS256) + bcrypt, Google OAuth | Server-signed tokens (24 h expiry), bcrypt-hashed passwords, role-based access control (`admin` / `employee` / `user`); Google sign-in exchanges tokens server-side |
+| **API Protection** | slowapi | Per-IP rate limiting: 100 req/min global, 10 req/min on the login endpoint; optional Redis backend via `REDIS_URL` |
+| **Migrations** | Alembic | Versioned schema migrations (`backend/alembic/`) |
 
 ---
 
@@ -247,6 +248,7 @@ All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓
 |--------|----------|-------------|
 | `POST` | `/api/auth/login` | 🔓 Exchange email + password for a signed JWT (rate-limited: 10 req/min) |
 | `POST` | `/api/auth/register` | 🔓 Self-register an end-user account (role is always `user`) |
+| `POST` | `/api/auth/google` | 🔓 Google OAuth sign-in — provisions the user and issues a signed JWT |
 | `GET` | `/api/auth/me` | 👤 Get current user's profile |
 | `PUT` | `/api/auth/me/password` | 👤 Change own password |
 
@@ -291,7 +293,7 @@ All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓
 ### 🔌 WebSockets (`/ws`)
 | Protocol | Endpoint | Description |
 |----------|----------|-------------|
-| `WS` | `/ws` | Real-time WebSocket connection for live ticket updates and notifications |
+| `WS` | `/ws` | 🔑 Authenticated real-time WebSocket (`?token=<JWT>`) for live ticket updates and notifications |
 
 ---
 
@@ -378,6 +380,8 @@ ai-ticketing-system/
 │   ├── assignee_engine.py       # Skill-matching & load-balancing algorithm
 │   ├── seed_data.py             # 15 seed employees & 10 demo scenario tickets
 │   ├── requirements.txt         # Python dependencies
+│   ├── alembic/                # Database migrations
+│   ├── tests/                  # Pytest suite (auth, RBAC, tickets)
 │   ├── .env.example             # Sample environment configuration
 │   └── routers/
 │       ├── auth.py             # Login, registration, profile & password endpoints
@@ -417,9 +421,19 @@ ai-ticketing-system/
 
 ## ⚠️ Known Limitations
 
-1. **WebSocket endpoint (`/ws`)**: accepts unauthenticated connections but only echoes acknowledgements — no ticket data is exposed. Token-gate it before shipping real-time updates.
-2. **Demo accounts**: seeded on every startup for quick evaluation. Remove `_seed_demo_users()` from `main.py` and rotate the admin password for real deployments.
-3. **Groq Rate Limits**: Groq's free tier has rate limits; the built-in offline engine handles rate limit fallbacks seamlessly without breaking requests.
+1. **Demo accounts**: seeded on every startup for quick evaluation. Remove `_seed_demo_users()` from `main.py` and rotate the admin password for real deployments.
+2. **Groq Rate Limits**: Groq's free tier has rate limits; the built-in offline engine handles rate limit fallbacks seamlessly without breaking requests.
+
+---
+
+## 🧪 Running the Test Suite
+
+```bash
+cd backend
+python -m pytest tests -q
+```
+
+Covers the auth API (login/register/JWT), RBAC security (401/403 enforcement per role), and ticket API behaviour.
 
 ---
 
@@ -430,8 +444,8 @@ ai-ticketing-system/
    - Enables semantic similarity search so the AI learns from past human resolutions to answer complex technical queries automatically.
 2. 🔐 **Enterprise Single Sign-On (SSO)**:
    - SAML 2.0 / OpenID Connect integration for Okta, Azure AD, and Google Workspace.
-3. ⚡ **Redis Caching & Background Workers**:
-   - Redis-backed rate limiting, sessions, and Celery workers for SLA timers and email dispatch at high concurrency.
+3. ⚡ **Background Workers & Scheduling**:
+   - Celery workers for SLA timers, email dispatch, and scheduled escalation sweeps at high concurrency.
 4. 📧 **Inbound Email Ingestion Gateway**:
    - Parse incoming support emails (`support@company.com`) via IMAP/SendGrid Webhooks directly into AI tickets.
 
