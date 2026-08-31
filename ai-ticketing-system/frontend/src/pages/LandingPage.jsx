@@ -160,6 +160,10 @@ export default function LandingPage({ onLogin }) {
       q: 'Does it require complex setup or API keys?',
       a: 'ResolvAI runs right out of the box with a pre-configured database and mock AI fallback, as well as native support for Groq, OpenAI, or Anthropic LLM backends.',
     },
+    {
+      q: 'Is ResolvAI secure enough for production?',
+      a: 'Yes. Passwords are bcrypt-hashed, every session uses a server-signed JWT, and all API endpoints enforce role-based access control (user / employee / admin). The API is rate-limited (100 req/min globally, 10 req/min on login), CORS-scoped to your frontend domain, secrets are masked in responses, and the one-click Render deployment provisions a managed PostgreSQL database.',
+    },
   ];
 
   return (
@@ -263,11 +267,12 @@ export default function LandingPage({ onLogin }) {
           </button>
         </div>
 
-        {/* Demo Quick Bar */}
-        <div className="mt-8 pt-6 border-t border-[#1f1f1f] max-w-xl mx-auto flex items-center justify-center gap-6 text-xs text-neutral-500">
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Instant Setup</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Pre-seeded Demo Data</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Real-Time WebSockets</span>
+        {/* Production-Ready Trust Bar */}
+        <div className="mt-8 pt-6 border-t border-[#1f1f1f] max-w-2xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-neutral-500">
+          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> JWT Authentication</span>
+          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Role-Based Access Control</span>
+          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Rate-Limited API</span>
+          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> PostgreSQL-Ready Deployment</span>
         </div>
 
       </section>

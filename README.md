@@ -1,6 +1,6 @@
 # 🤖 ResolvAI — Smart AI Ticketing & Autonomous Helpdesk System
 
-> **ResolvAI** is an enterprise-grade AI internal ticketing platform. It uses Large Language Models (LLM) to read incoming tickets, classify severity and sentiment, auto-resolve common inquiries, route complex issues to the best-suited employees based on skill tags and workload, track SLAs with real-time countdown badges, and notify teams via Slack.
+> **ResolvAI** is an enterprise-grade AI internal ticketing platform. It uses Large Language Models (LLM) to read incoming tickets, classify severity and sentiment, auto-resolve common inquiries, route complex issues to the best-suited employees based on skill tags and workload, track SLAs with real-time countdown badges, and notify teams via Slack. Ships production-ready: JWT authentication, role-based access control, rate limiting, and one-click Render + PostgreSQL deployment.
 
 ---
 
@@ -17,9 +17,9 @@
                                                       |
                                                       v
                                   +---------------------------------------+
-                                  |         Backend API (FastAPI)         |
-                                  |     (Routers: Tickets, Employees,     |
-                                  |          Analytics, Settings)         |
+                                   |         Backend API (FastAPI)         |
+                                   |  (Routers: Auth, Tickets, Employees,  |
+                                   |   Analytics, Settings — JWT + RBAC)   |
                                   +---------+-------------------+---------+
                                             |                   |
                      +----------------------+                   +-----------------------+
@@ -35,8 +35,8 @@
                      |                                                                 |
                      v                                                                 v
     +---------------------------------+                               +----------------------------------+
-    |     System Settings & SQLite    |                               |      External Dispatches         |
-    |  - SQLite (tickets, employees)  |                               |  - Real-time WebSockets (`/ws`)  |
+    |  Settings & Database Layer      |                               |      External Dispatches         |
+    |  - SQLite (dev) / PostgreSQL    |                               |  - Real-time WebSockets (`/ws`)  |
     |  - SystemSetting key-value DB   |                               |  - Slack Webhook Cards           |
     +---------------------------------+                               +----------------------------------+
 ```
@@ -123,11 +123,12 @@ graph TD
 | **Styling & Icons** | Tailwind CSS 3, Lucide Icons | Modern dark-mode glassmorphic design system |
 | **Data Visualization** | Recharts | Interactive department load, category, and sentiment analytics |
 | **Backend API** | Python 3.10+, FastAPI | High-performance async REST API framework |
-| **Database & ORM** | SQLite, SQLAlchemy | Relational DB with automatic schema migrations & key-value settings storage |
+| **Database & ORM** | SQLite (dev) / PostgreSQL (prod), SQLAlchemy | Zero-config SQLite locally; managed PostgreSQL in production via `DATABASE_URL` |
 | **AI / LLM Engine** | Groq (`llama-3.3-70b-versatile`) | Ultra-fast LLM inference with smart offline fallback mode |
 | **Real-time Engine** | WebSockets (`/ws`) | Live updates for tickets, chat replies, and system notifications |
 | **Notifications** | Slack Incoming Webhooks | Rich alert cards dispatched on urgent tickets or SLA escalations |
-| **Auth & Identity** | Client Auth + Google OAuth | Email/Password, Google OAuth ("Continue with Google"), 1-click Demo quick-login |
+| **Auth & Identity** | JWT (HS256) + bcrypt, Google OAuth | Server-signed tokens (24 h expiry), bcrypt-hashed passwords, role-based access control (`admin` / `employee` / `user`) |
+| **API Protection** | slowapi | Per-IP rate limiting: 100 req/min global, 10 req/min on the login endpoint |
 
 ---
 
@@ -147,13 +148,14 @@ cd ai-ticketing-system/backend
 # Install Python dependencies
 pip install -r requirements.txt
 
-# (Optional) Copy environment variables sample
+# Copy environment variables sample and set a strong SECRET_KEY
 cp .env.example .env
+python -c "import secrets; print(secrets.token_hex(32))"   # paste output into SECRET_KEY
 
 # Start FastAPI dev server with auto-reload
 uvicorn main:app --reload --port 8000
 ```
-> 💡 *Note: The backend auto-creates SQLite tables, registers system settings, and seeds 15 employee directory records on first startup.*
+> 💡 *Note: The backend auto-creates database tables, registers system settings, seeds 15 employee directory records, and creates the bcrypt-hashed demo user accounts on first startup.*
 
 ### 2. Frontend Setup
 
@@ -179,6 +181,9 @@ You can configure integrations in **two ways**:
 2. **Via `.env` Files**:
    - **Backend (`ai-ticketing-system/backend/.env`)**:
      ```env
+     SECRET_KEY=change-me-to-a-long-random-string   # REQUIRED in production
+     ACCESS_TOKEN_EXPIRE_MINUTES=1440               # JWT expiry (24 h)
+     ALLOWED_ORIGINS=http://localhost:5173          # CORS allow-list
      GROQ_API_KEY=gsk_your_groq_api_key_here
      SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T000/B000/XXXXX
      ```
@@ -189,47 +194,87 @@ You can configure integrations in **two ways**:
 
 ---
 
+## 🔐 Security & Production Readiness
+
+| Control | Implementation |
+|---|---|
+| **Authentication** | Server-signed JWTs (HS256, `python-jose`); 24 h expiry via `ACCESS_TOKEN_EXPIRE_MINUTES` |
+| **Password Storage** | bcrypt hashing (`backend/auth_utils.py`) — never stored or logged in plaintext |
+| **Authorization** | Role-based access control on every endpoint (`require_admin`, `require_employee_or_admin`, `require_auth`); end-users can only read & create their own tickets |
+| **Rate Limiting** | slowapi — 100 req/min per IP globally, 10 req/min on the login endpoint |
+| **CORS** | Environment-scoped via `ALLOWED_ORIGINS`; localhost-only fallback in dev |
+| **Secrets Hygiene** | Groq keys & Slack webhooks masked in API responses; settings endpoints are admin-only |
+| **Deployment** | One-click Render blueprint (`render.yaml`) with managed PostgreSQL; `SECRET_KEY` set manually in the dashboard; Swagger UI disabled when `ENVIRONMENT=production` |
+
+### Demo Accounts (seeded on startup, bcrypt-hashed in DB)
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@gmail.com` | `admin123` | admin |
+| `employee@company.com` | `employee123` | employee |
+| `user@gmail.com` | `user123` | user |
+
+> ⚠️ For a real deployment: change these passwords immediately (or remove `_seed_demo_users()` from `main.py`) and set a strong `SECRET_KEY`.
+
+### Deploying to Render
+
+1. Push this repo to GitHub and create a **Blueprint** from `render.yaml`.
+2. Render provisions the FastAPI backend, the React static frontend, and a **managed PostgreSQL** database.
+3. In the Render dashboard set `SECRET_KEY` (generate with `python -c "import secrets; print(secrets.token_hex(32))"`), `GROQ_API_KEY`, and `ALLOWED_ORIGINS` (your frontend URL, e.g. `https://ai-ticketing-frontend.onrender.com`).
+
+---
+
 ## 📡 Complete API Endpoints Documentation
 
 Swagger Interactive API Docs: `http://localhost:8000/docs`
 
+All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓. Role legend: 🔓 public · 👤 any authenticated user · 👩‍💻 employee/admin · 🛡️ admin only.
+
+### 🔑 Authentication (`/api/auth`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/login` | 🔓 Exchange email + password for a signed JWT (rate-limited: 10 req/min) |
+| `POST` | `/api/auth/register` | 🔓 Self-register an end-user account (role is always `user`) |
+| `GET` | `/api/auth/me` | 👤 Get current user's profile |
+| `PUT` | `/api/auth/me/password` | 👤 Change own password |
+
 ### 🎟️ Tickets (`/api/tickets`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/tickets/` | Create a new ticket (triggers AI analysis, auto-resolution check, & routing) |
-| `GET` | `/api/tickets/` | List tickets with filters (`status`, `department`, `severity`, `category`, `sla_status`, `search`) |
-| `GET` | `/api/tickets/{id}` | Get detailed ticket object with replies, notes, SLA status, and timeline |
-| `PATCH` | `/api/tickets/{id}/status` | Update ticket status (`New`, `Assigned`, `In Progress`, `Pending Info`, `Resolved`, `Closed`) |
-| `POST` | `/api/tickets/{id}/notes` | Add internal employee note to a ticket |
-| `POST` | `/api/tickets/{id}/replies` | Post public reply to ticket conversation |
-| `POST` | `/api/tickets/{id}/generate-reply` | ✨ Generate AI draft reply using Groq LLM |
-| `GET` | `/api/tickets/{id}/timeline` | Fetch activity timeline events |
-| `POST` | `/api/tickets/{id}/feedback` | Submit user satisfaction feedback (`Helpful` / `Unhelpful`) |
-| `POST` | `/api/tickets/{id}/escalate` | Escalate ticket severity & trigger urgent Slack notification |
-| `POST` | `/api/tickets/check-escalations` | System timer check for overdue tickets |
-| `POST` | `/api/tickets/reset-seed` | 🔄 1-Click reset database back to initial seed dataset |
+| `POST` | `/api/tickets/` | 👤 Create a new ticket (triggers AI analysis, auto-resolution check, & routing) |
+| `GET` | `/api/tickets/` | 👤 List tickets with filters (`status`, `department`, `severity`, `category`, `sla_status`, `search`) — end-users only see their own |
+| `GET` | `/api/tickets/{id}` | 👤 Get detailed ticket object with replies, notes, SLA status, and timeline |
+| `PATCH` | `/api/tickets/{id}/status` | 👩‍💻 Update ticket status (`New`, `Assigned`, `In Progress`, `Pending Info`, `Resolved`, `Closed`) |
+| `POST` | `/api/tickets/{id}/notes` | 👩‍💻 Add internal employee note to a ticket |
+| `POST` | `/api/tickets/{id}/replies` | 👤 Post reply — official replies restricted to admin or the assigned employee |
+| `POST` | `/api/tickets/{id}/generate-reply` | 👩‍💻 ✨ Generate AI draft reply using Groq LLM |
+| `GET` | `/api/tickets/{id}/timeline` | 👤 Fetch activity timeline events |
+| `POST` | `/api/tickets/{id}/feedback` | 👤 Submit user satisfaction feedback (`Helpful` / `Unhelpful`) |
+| `POST` | `/api/tickets/{id}/escalate` | 🛡️ Escalate ticket severity & trigger urgent Slack notification |
+| `POST` | `/api/tickets/check-escalations` | 🛡️ System timer check for overdue tickets |
+| `POST` | `/api/tickets/reset-seed` | 🛡️ 🔄 1-Click reset database back to initial seed dataset |
 
 ### ⚙️ System Settings (`/api/settings`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/settings/` | Fetch current system settings & integration configuration states |
-| `POST` | `/api/settings/` | Save Groq API key, model choice, or Slack webhook URL |
-| `POST` | `/api/settings/test-slack` | 🧪 Send test alert card to configured Slack channel |
+| `GET` | `/api/settings/` | 🛡️ Fetch current system settings (secrets masked) |
+| `POST` | `/api/settings/` | 🛡️ Save Groq API key, model choice, or Slack webhook URL |
+| `POST` | `/api/settings/test-slack` | 🛡️ 🧪 Send test alert card to configured Slack channel |
 
 ### 👥 Employees (`/api/employees`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/employees/` | List employee directory with skill tags & current ticket workloads |
-| `POST` | `/api/employees/` | Register new employee |
-| `PUT` | `/api/employees/{id}` | Update employee details, skills, or availability |
-| `DELETE` | `/api/employees/{id}` | Deactivate employee |
+| `GET` | `/api/employees/` | 👩‍💻 List employee directory with skill tags & current ticket workloads |
+| `POST` | `/api/employees/` | 🛡️ Register new employee |
+| `PUT` | `/api/employees/{id}` | 🛡️ Update employee details, skills, or availability |
+| `DELETE` | `/api/employees/{id}` | 🛡️ Deactivate employee |
 
 ### 📊 Analytics (`/api/analytics`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/analytics/overview` | Executive KPI stats (total tickets, auto-resolved %, SLA compliance, resolution time) |
-| `GET` | `/api/analytics/department-load` | Department ticket distribution for charts |
-| `GET` | `/api/analytics/top-categories` | Top 5 ticket category breakdown |
+| `GET` | `/api/analytics/overview` | 👩‍💻 Executive KPI stats (total tickets, auto-resolved %, SLA compliance, resolution time) |
+| `GET` | `/api/analytics/department-load` | 👩‍💻 Department ticket distribution for charts |
+| `GET` | `/api/analytics/top-categories` | 👩‍💻 Top 5 ticket category breakdown |
 
 ### 🔌 WebSockets (`/ws`)
 | Protocol | Endpoint | Description |
@@ -257,8 +302,8 @@ The system includes 10 pre-built test ticket scenarios (`backend/seed_data.py`):
 
 ## 🚀 Key Modules & Feature Walkthrough
 
-### 1. 🔑 Authentication & Google OAuth
-Supports Email/Password sign-in & registration, **Google OAuth ("Continue with Google")** with a 1-click account picker, and instant **Demo User / Demo Admin** fast-logins.
+### 1. 🔑 Authentication — JWT, RBAC & Google OAuth
+Email/password login issues **server-signed JWTs** (bcrypt-hashed passwords, 24 h expiry). Every API endpoint enforces **role-based access control** (`admin` / `employee` / `user`), end-users only see their own tickets, the login endpoint is rate-limited, and **Google OAuth** plus quick demo logins are supported.
 
 ![Google OAuth & Login Interface](https://github.com/user-attachments/assets/73211743-dbb5-46fd-8b92-194c2a90b8a6)
 
@@ -311,8 +356,10 @@ Visualizes ticket volume trends, department workloads, category distributions, a
 ai-ticketing-system/
 ├── backend/
 │   ├── main.py                 # FastAPI application & WebSocket server
-│   ├── database.py              # SQLite connection & SQLAlchemy Session
-│   ├── models.py                # ORM Database Models (Ticket, Employee, SystemSetting, etc.)
+│   ├── auth_utils.py           # JWT + bcrypt utilities & RBAC dependencies
+│   ├── limiter.py              # slowapi rate-limit configuration
+│   ├── database.py              # SQLAlchemy engine (SQLite/PostgreSQL) & Session
+│   ├── models.py                # ORM Database Models (User, Ticket, Employee, SystemSetting, etc.)
 │   ├── schemas.py               # Pydantic validation schemas
 │   ├── ai_service.py            # Groq LLM integration + Smart Offline Engine
 │   ├── routing_engine.py        # Rule-based department classification
@@ -321,6 +368,7 @@ ai-ticketing-system/
 │   ├── requirements.txt         # Python dependencies
 │   ├── .env.example             # Sample environment configuration
 │   └── routers/
+│       ├── auth.py             # Login, registration, profile & password endpoints
 │       ├── tickets.py           # Ticket CRUD, SLA tracking, AI reply & seed reset
 │       ├── settings.py          # System settings & Slack webhook verification
 │       ├── employees.py         # Employee directory CRUD
@@ -357,8 +405,8 @@ ai-ticketing-system/
 
 ## ⚠️ Known Limitations
 
-1. **Local Authentication**: User sessions are currently client-managed with role state in local storage. Production enterprise deployments should attach JWT token verification middleware.
-2. **SQLite Database**: SQLite is lightweight and zero-config for local development/demos. Large enterprise instances should switch to PostgreSQL.
+1. **WebSocket endpoint (`/ws`)**: accepts unauthenticated connections but only echoes acknowledgements — no ticket data is exposed. Token-gate it before shipping real-time updates.
+2. **Demo accounts**: seeded on every startup for quick evaluation. Remove `_seed_demo_users()` from `main.py` and rotate the admin password for real deployments.
 3. **Groq Rate Limits**: Groq's free tier has rate limits; the built-in offline engine handles rate limit fallbacks seamlessly without breaking requests.
 
 ---
@@ -370,8 +418,8 @@ ai-ticketing-system/
    - Enables semantic similarity search so the AI learns from past human resolutions to answer complex technical queries automatically.
 2. 🔐 **Enterprise Single Sign-On (SSO)**:
    - SAML 2.0 / OpenID Connect integration for Okta, Azure AD, and Google Workspace.
-3. 🐘 **PostgreSQL & Redis Caching**:
-   - Migrate database layer to PostgreSQL with Redis caching for high-concurrency enterprise workloads.
+3. ⚡ **Redis Caching & Background Workers**:
+   - Redis-backed rate limiting, sessions, and Celery workers for SLA timers and email dispatch at high concurrency.
 4. 📧 **Inbound Email Ingestion Gateway**:
    - Parse incoming support emails (`support@company.com`) via IMAP/SendGrid Webhooks directly into AI tickets.
 
