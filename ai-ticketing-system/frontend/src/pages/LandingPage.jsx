@@ -65,11 +65,16 @@ export default function LandingPage({ onLogin }) {
         const info = await res.json();
         const googleEmail = (info.email || '').toLowerCase();
         const googleName  = info.name   || googleEmail.split('@')[0];
-        // Google OAuth users get a user-role session (no backend JWT issued here)
-        onLogin({ role: 'user', email: googleEmail, name: googleName }, null);
+        const data = await authApi.googleAuth({
+          email: googleEmail,
+          name: googleName,
+          access_token: codeResponse?.access_token,
+        });
+        setAuthToken(data.access_token);
+        onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
         setShowLoginModal(false);
-      } catch {
-        setGoogleError('Google sign-in failed. Please try again.');
+      } catch (err) {
+        setGoogleError(err.message || 'Google sign-in failed. Please try again.');
       }
     },
     onError: () => setGoogleError('Google sign-in was cancelled or failed.'),

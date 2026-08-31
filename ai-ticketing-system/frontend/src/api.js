@@ -92,6 +92,10 @@ export const authApi = {
   register: (name, email, password) =>
     request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
 
+  /** Authenticate / Register with Google OAuth credentials. Returns { access_token, role, email, name }. */
+  googleAuth: (payload) =>
+    request('/auth/google', { method: 'POST', body: JSON.stringify(payload) }),
+
   /** Get current user profile. */
   me: () => request('/auth/me'),
 

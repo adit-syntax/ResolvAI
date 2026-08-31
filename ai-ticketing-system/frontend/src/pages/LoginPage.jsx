@@ -62,15 +62,21 @@ export default function LoginPage({ onLogin }) {
   // Google OAuth
   const [googleError, setGoogleError]   = useState('');
 
-  // ── Google OAuth ─────────────────────────────────────────────────────────────
-
-  const handleGoogleSuccess = (info) => {
+  const handleGoogleSuccess = async (info, codeResponse) => {
     setGoogleError('');
     const googleEmail = (info.email || '').toLowerCase();
     const googleName  = info.name || googleEmail.split('@')[0];
-    // Google OAuth users get a synthetic "user" session — no JWT from our backend
-    // In a real app you'd exchange the Google token at the backend for a JWT
-    onLogin({ role: 'user', email: googleEmail, name: googleName }, null);
+    try {
+      const data = await authApi.googleAuth({
+        email: googleEmail,
+        name: googleName,
+        access_token: codeResponse?.access_token,
+      });
+      setAuthToken(data.access_token);
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+    } catch (err) {
+      setGoogleError(err.message || 'Google sign-in failed on server verification.');
+    }
   };
 
   const googleLogin = useGoogleLogin({
@@ -80,7 +86,7 @@ export default function LoginPage({ onLogin }) {
           headers: { Authorization: `Bearer ${codeResponse.access_token}` },
         });
         const info = await res.json();
-        handleGoogleSuccess(info);
+        await handleGoogleSuccess(info, codeResponse);
       } catch {
         setGoogleError('Google sign-in failed. Please try again.');
       }

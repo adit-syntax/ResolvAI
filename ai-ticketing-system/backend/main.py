@@ -17,7 +17,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from limiter import limiter
 import json
 import asyncio
-from typing import List
+from typing import List, Optional
 
 from database import engine, SessionLocal, Base
 from models import *  # registers all ORM models
@@ -182,8 +182,20 @@ app.include_router(settings.router)
 
 # ─── WebSocket ───────────────────────────────────────────────────────────────
 
+from auth_utils import decode_token
+
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
+    """Authenticated WebSocket endpoint for real-time ticket alerts and updates."""
+    if token:
+        payload = decode_token(token)
+        if not payload:
+            await websocket.close(code=1008)  # 1008: Policy Violation
+            return
+    elif os.getenv("ENVIRONMENT") == "production":
+        await websocket.close(code=1008)
+        return
+
     await manager.connect(websocket)
     try:
         while True:

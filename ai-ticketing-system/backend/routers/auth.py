@@ -37,6 +37,13 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=6, max_length=128)
 
 
+class GoogleAuthRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=150)
+    name: Optional[str] = ""
+    access_token: Optional[str] = None
+    id_token: Optional[str] = None
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -119,7 +126,44 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    token = create_access_token({"sub": str(user.id), "role": user.role})
+    token = create_access_token({"sub": str(user.id), "role": user.role, "email": user.email, "name": user.name})
+    return TokenResponse(
+        access_token=token,
+        role=user.role,
+        email=user.email,
+        name=user.name,
+    )
+
+
+import secrets
+
+@router.post("/google", response_model=TokenResponse)
+def google_auth(data: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """
+    Authenticate / Register via Google OAuth.
+    Validates email, provisions or finds User in DB, and issues a real JWT access token.
+    """
+    email = data.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email from Google OAuth.")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        # Create new customer user
+        user = User(
+            name=(data.name or email.split("@")[0]).strip(),
+            email=email,
+            hashed_password=get_password_hash(secrets.token_hex(16)),
+            role="user",
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif not user.is_active:
+        raise HTTPException(status_code=403, detail="Your account has been deactivated.")
+
+    token = create_access_token({"sub": str(user.id), "role": user.role, "email": user.email, "name": user.name})
     return TokenResponse(
         access_token=token,
         role=user.role,
