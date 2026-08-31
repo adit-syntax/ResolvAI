@@ -15,7 +15,11 @@ from database import get_db
 from models import SystemSetting
 from auth_utils import require_admin
 
-router = APIRouter(prefix="/api/settings", tags=["Settings"])
+router = APIRouter(
+    prefix="/api/settings",
+    tags=["Settings"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 class SettingsUpdate(BaseModel):
@@ -28,15 +32,13 @@ class TestSlackRequest(BaseModel):
     webhook_url: Optional[str] = None
 
 
-def get_setting_value(db: Session, key: str, env_key: str = None) -> Optional[str]:
-    """Retrieve setting from DB table system_settings first, falling back to .env variable."""
+def get_setting_value(db: Session, key: str, env_var: Optional[str] = None) -> Optional[str]:
+    """Get setting value: checks system_settings table first, falls back to .env."""
     record = db.query(SystemSetting).filter(SystemSetting.key == key).first()
-    if record and record.value and record.value.strip():
-        return record.value.strip()
-    if env_key:
-        env_val = os.getenv(env_key)
-        if env_val and env_val.strip():
-            return env_val.strip()
+    if record and record.value:
+        return record.value
+    if env_var:
+        return os.getenv(env_var, None)
     return None
 
 
@@ -57,9 +59,16 @@ def mask_secret(secret: Optional[str]) -> str:
     return f"{secret[:5]}...{secret[-4:]}"
 
 
+def mask_url(url: Optional[str]) -> str:
+    """Mask sensitive webhook URL like https://hooks.slack.com/services/T00/B00/X12345678 -> https://hooks.slack.com/...5678."""
+    if not url or len(url) < 30:
+        return url or ""
+    return f"{url[:28]}...{url[-6:]}"
+
+
 @router.get("/")
 def get_settings(db: Session = Depends(get_db)):
-    """Get current Web UI system settings and integration status."""
+    """Get current Web UI system settings and integration status. Admin only."""
     groq_key = get_setting_value(db, "groq_api_key", "GROQ_API_KEY")
     slack_url = get_setting_value(db, "slack_webhook_url", "SLACK_WEBHOOK_URL")
     groq_model = get_setting_value(db, "groq_model", "GROQ_MODEL") or "llama-3.3-70b-versatile"
@@ -67,7 +76,7 @@ def get_settings(db: Session = Depends(get_db)):
     return {
         "groq_api_key": mask_secret(groq_key),
         "is_groq_configured": bool(groq_key and groq_key.startswith("gsk_")),
-        "slack_webhook_url": slack_url or "",
+        "slack_webhook_url": mask_url(slack_url),
         "is_slack_configured": bool(slack_url and slack_url.startswith("http")),
         "groq_model": groq_model,
         "raw_groq_set": bool(groq_key),

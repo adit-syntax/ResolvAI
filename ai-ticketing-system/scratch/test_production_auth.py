@@ -74,6 +74,20 @@ async def test_full_production_readiness():
         print("[OK] Internal notes & suggestions strictly restricted to staff (403 for customers)")
 
         # 5. Verify Employee Directory Routes are Restricted
+        # POST /test-slack & GET /api/settings/ -> only Admin
+        assert (await client.get("/api/settings/")).status_code == 401
+        assert (await client.get("/api/settings/", headers=user_headers)).status_code == 403
+        assert (await client.get("/api/settings/", headers=emp_headers)).status_code == 403
+        r_settings_admin = await client.get("/api/settings/", headers=admin_headers)
+        assert r_settings_admin.status_code == 200
+        assert "slack_webhook_url" in r_settings_admin.json()
+        print("[OK] /api/settings/ (GET & POST) strictly locked to Admin with masked webhook URL")
+
+        assert (await client.post("/api/settings/test-slack", json={})).status_code == 401
+        assert (await client.post("/api/settings/test-slack", json={}, headers=user_headers)).status_code == 403
+        assert (await client.post("/api/settings/test-slack", json={}, headers=emp_headers)).status_code == 403
+        print("[OK] /api/settings/test-slack strictly locked to Admin")
+
         assert (await client.get("/api/employees/")).status_code == 401
         assert (await client.get("/api/employees/", headers=user_headers)).status_code == 403
         assert (await client.get("/api/employees/active-tickets", headers=user_headers)).status_code == 403

@@ -311,7 +311,7 @@ async def create_ticket(
 
     # Step 2: AI Analysis
     ai_result = await analyze_ticket(
-        title, ticket_data.description, ticket_data.user_email
+        title, ticket_data.description, user_email
     )
 
     # Store AI analysis on the ticket
@@ -344,7 +344,7 @@ async def create_ticket(
 
         _add_timeline(db, ticket.id, "auto_resolved", "Ticket auto-resolved by AI", actor="AI Engine")
         _send_notification(
-            db, ticket.id, ticket_data.user_email,
+            db, ticket.id, user_email,
             f"[Resolved] {ticket_data.title}",
             auto_response, "resolved"
         )
@@ -387,7 +387,7 @@ async def create_ticket(
             )
 
             _send_notification(
-                db, ticket.id, ticket_data.user_email,
+                db, ticket.id, user_email,
                 f"[Assigned] {ticket_data.title}",
                 f"Your ticket has been assigned to {assignment['employee_name']} in the {routing['department']} department.",
                 "status_change"
