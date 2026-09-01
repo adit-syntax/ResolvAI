@@ -8,7 +8,8 @@ import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import {
   Headphones, ListTodo, Users, BarChart3, LayoutDashboard,
-  Menu, CircleDot, LogOut, User, ShieldCheck, FileText, Settings
+  Menu, CircleDot, LogOut, User, ShieldCheck, FileText, Settings,
+  X, UserCheck, Shield, Sparkles, BookOpen
 } from 'lucide-react';
 import { getAuthToken, setAuthToken, clearAuthToken, decodeJwtPayload } from './api.js';
 
@@ -23,17 +24,21 @@ import TicketDetail from './pages/TicketDetail.jsx';
 import EmployeeDirectory from './pages/EmployeeDirectory.jsx';
 import EmployeeDashboard from './pages/EmployeeDashboard.jsx';
 import Analytics from './pages/Analytics.jsx';
+import KnowledgeBase from './pages/KnowledgeBase.jsx';
+import IncidentAlertBanner from './components/IncidentAlertBanner.jsx';
 
 // ─── Navigation Items (role-gated) ────────────────────────
 
 const userNavItems = [
   { path: '/', icon: Headphones, label: 'Support Portal' },
   { path: '/my-tickets', icon: FileText, label: 'My Tickets' },
+  { path: '/knowledge', icon: BookOpen, label: 'Knowledge Base (RAG)' },
 ];
 
 const employeeNavItems = [
   { path: '/employee-dashboard', icon: LayoutDashboard, label: 'My Dashboard' },
   { path: '/tickets', icon: ListTodo, label: 'All Tickets' },
+  { path: '/knowledge', icon: BookOpen, label: 'Knowledge Base & RAG' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard' },
 ];
 
@@ -41,6 +46,7 @@ const adminNavItems = [
   { path: '/tickets', icon: ListTodo, label: 'Ticket Management' },
   { path: '/employees', icon: Users, label: 'Employee Directory' },
   { path: '/employee-dashboard', icon: LayoutDashboard, label: 'Staff Workspace' },
+  { path: '/knowledge', icon: BookOpen, label: 'Knowledge Base & RAG' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard' },
 ];
 
@@ -205,6 +211,7 @@ function Layout({ children, role, email, onLogout }) {
 
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
+        <IncidentAlertBanner />
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {children}
         </div>
@@ -223,20 +230,14 @@ function loadAuth() {
   const token = getAuthToken();
   if (!token) return null;
   const payload = decodeJwtPayload(token);
-  if (!payload) { clearAuthToken(); return null; }
-
-  // Check token expiry (exp is Unix seconds)
-  if (payload.exp && payload.exp * 1000 < Date.now()) {
+  if (!payload || !payload.role) {
     clearAuthToken();
     return null;
   }
-
-  // sub = user DB id, role = role string from token claims
-  // name/email are returned from the login endpoint and stored separately
   return {
-    role: payload.role || 'user',
+    role: payload.role,
     email: payload.email || localStorage.getItem('userEmail') || '',
-    name:  payload.name  || '',
+    name: payload.name || '',
   };
 }
 
@@ -280,6 +281,7 @@ export default function App() {
                   <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
                   <Route path="/employees" element={<EmployeeDirectory />} />
                   <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
+                  <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="*" element={<Navigate to="/tickets" replace />} />
                 </>
@@ -289,6 +291,7 @@ export default function App() {
                   <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
                   <Route path="/tickets" element={<TicketList />} />
                   <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
+                  <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="*" element={<Navigate to="/employee-dashboard" replace />} />
                 </>
@@ -297,6 +300,7 @@ export default function App() {
                 <>
                   <Route path="/" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
                   <Route path="/my-tickets" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
+                  <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </>
               )}

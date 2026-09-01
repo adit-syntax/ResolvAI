@@ -22,7 +22,7 @@ from typing import List, Optional
 from database import engine, SessionLocal, Base
 from models import *  # registers all ORM models
 from seed_data import seed_employees
-from routers import tickets, employees, analytics, settings
+from routers import tickets, employees, analytics, settings, knowledge
 from routers import auth as auth_router
 
 
@@ -178,6 +178,7 @@ app.include_router(tickets.router)
 app.include_router(employees.router)
 app.include_router(analytics.router)
 app.include_router(settings.router)
+app.include_router(knowledge.router)
 
 
 # ─── WebSocket ───────────────────────────────────────────────────────────────

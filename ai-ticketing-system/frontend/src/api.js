@@ -178,3 +178,15 @@ export const settingsApi = {
 export const healthApi = {
   check: () => request('/health'),
 };
+
+// ─── Knowledge Base & GenAI (RAG, Clustering, Agent Trace) ───────────────────
+
+export const knowledgeApi = {
+  getArticles: () => request('/knowledge/articles'),
+  createArticle: (data) => request('/knowledge/articles', { method: 'POST', body: JSON.stringify(data) }),
+  queryRAG: (query, top_k = 3) => request('/knowledge/query', { method: 'POST', body: JSON.stringify({ query, top_k }) }),
+  getLiveIncidents: () => request('/knowledge/incidents'),
+  getDuplicates: (ticketId) => request(`/knowledge/duplicates/${ticketId}`),
+  getAgentTrace: (ticketId) => request(`/knowledge/agent-trace/${ticketId}`),
+  sanitizePII: (text) => request('/knowledge/sanitize-pii', { method: 'POST', body: JSON.stringify({ text }) }),
+};

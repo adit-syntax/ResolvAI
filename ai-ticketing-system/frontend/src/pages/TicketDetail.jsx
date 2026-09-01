@@ -15,9 +15,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Sparkles, Clock, User, MessageSquare, Send,
   AlertTriangle, CheckCircle2, Loader2, ArrowUpCircle, RefreshCw,
-  FileText, Bot, Lightbulb, Lock, ShieldCheck
+  FileText, Bot, Lightbulb, Lock, ShieldCheck, Cpu, Terminal, Shield, Layers
 } from 'lucide-react';
-import { ticketApi } from '../api.js';
+import { ticketApi, knowledgeApi } from '../api.js';
 import TicketFlowGraph from '../components/TicketFlowGraph.jsx';
 
 const STATUSES = ['New', 'Assigned', 'In Progress', 'Pending Info', 'Resolved', 'Closed'];
@@ -29,6 +29,8 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
   const [timeline, setTimeline] = useState([]);
   const [notes, setNotes] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
+  const [agentTrace, setAgentTrace] = useState(null);
+  const [duplicates, setDuplicates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [replyForm, setReplyForm] = useState('');
   const [suggestionForm, setSuggestionForm] = useState('');
@@ -42,16 +44,20 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
 
   const fetchData = useCallback(async (silent = false) => {
     try {
-      const [t, tl, n, s] = await Promise.all([
+      const [t, tl, n, s, tr, dup] = await Promise.all([
         ticketApi.get(id),
         ticketApi.getTimeline(id),
         ticketApi.getNotes(id),
         ticketApi.getSuggestions(id),
+        knowledgeApi.getAgentTrace(id).catch(() => null),
+        knowledgeApi.getDuplicates(id).catch(() => []),
       ]);
       setTicket(t);
       setTimeline(tl);
       setNotes(n);
       setSuggestions(s);
+      if (tr) setAgentTrace(tr);
+      if (dup) setDuplicates(dup);
       if (!silent) setStatusUpdate(t.status);
       if (CLOSED_STATUSES.includes(t.status)) {
         clearInterval(pollRef.current);
@@ -319,6 +325,53 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
                   </div>
                 )}
               </>
+            )}
+
+            {/* 🤖 Autonomous AI Agent Reasoning & Tool Trace */}
+            {agentTrace && (
+              <div className="border-t border-white/5 mt-5 pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-purple-400" /> Autonomous Agent Diagnostic Trace (ReAct Loop)
+                  </h3>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                    {agentTrace.reasoning_steps} Diagnostic Step(s)
+                  </span>
+                </div>
+
+                {/* Steps Accordion / Cards */}
+                <div className="space-y-3 bg-surface-900/50 p-4 rounded-xl border border-purple-500/20">
+                  {agentTrace.trace?.map((step, idx) => (
+                    <div key={idx} className="bg-neutral-950 p-3.5 rounded-lg border border-neutral-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-purple-300 font-mono">Step {step.step}: Thought &amp; Tool</span>
+                        <span className="text-[10px] font-mono text-neutral-400 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
+                          Action: {step.action}
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-300 italic font-mono">
+                        💭 "{step.thought}"
+                      </p>
+                      {step.observation && (
+                        <div className="text-[11px] text-emerald-400 font-mono bg-neutral-900/80 p-2.5 rounded border border-neutral-800">
+                          <span className="text-neutral-500 block mb-1">🔍 Tool Observation Output:</span>
+                          <pre className="whitespace-pre-wrap">{JSON.stringify(step.observation, null, 2)}</pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* PII & Grounded Source Summary */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs border-t border-neutral-800/80 text-neutral-400">
+                    <span className="flex items-center gap-1.5 text-blue-400">
+                      <Shield className="w-3.5 h-3.5" /> {agentTrace.pii_sanitization?.summary}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-purple-400 font-medium">
+                      <Sparkles className="w-3.5 h-3.5" /> Grounded In: {agentTrace.grounded_source}
+                    </span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -605,6 +658,41 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
               {ticket.severity} Priority
             </div>
           </div>
+
+          {/* 🔗 Semantic Duplicates & Incident Clustering */}
+          {duplicates && duplicates.length > 0 && (
+            <div className="glass-card p-6 border-amber-500/20 shadow-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-amber-400" /> Semantic Duplicates ({duplicates.length})
+                </h3>
+                <span className="text-[10px] font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  Cosine Match
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-400 mb-3">
+                The Vector AI Engine detected related tickets submitted with similar symptoms:
+              </p>
+              <div className="space-y-2">
+                {duplicates.slice(0, 3).map((dup) => (
+                  <button
+                    key={dup.ticket_id}
+                    onClick={() => navigate(`/tickets/${dup.ticket_id}`)}
+                    className="w-full text-left p-2.5 rounded-lg bg-neutral-900/80 hover:bg-neutral-800 border border-neutral-800 transition-colors group block"
+                  >
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="font-mono text-primary-400 font-bold group-hover:underline">#{dup.ticket_id}</span>
+                      <span className="text-[10px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                        {Math.round(dup.similarity_score * 100)}% Similar
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium text-white truncate">{dup.title}</p>
+                    <p className="text-[10px] text-neutral-500 mt-0.5 truncate">{dup.user_email}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Status Update — admin only */}
           {canUpdateStatus && (

@@ -243,31 +243,60 @@ async def analyze_with_claude(title: str, description: str, user_email: str) -> 
 
 async def analyze_ticket(title: str, description: str, user_email: str) -> AIAnalysisResult:
     """
-    Main analysis function. Tries Groq → Claude → Mock fallback.
-    Always returns a valid AIAnalysisResult.
+    Main analysis function.
+    1. Runs Enterprise PII Guardrail to sanitize sensitive tokens/passwords.
+    2. Uses RAG vector search to find matching enterprise runbooks.
+    3. Analyzes via Groq / Claude with grounded context, falling back to mock engine.
     """
+    from guardrails import PIISanitizer
+    from rag_engine import rag_engine
+
+    # Step 1: PII Sanitization
+    sanitized_desc, pii_entities = PIISanitizer.sanitize(description)
+    if pii_entities:
+        print(f"[AI Guardrail] {PIISanitizer.audit_summary(pii_entities)}")
+
+    # Step 2: RAG Context Retrieval
+    rag_matches = rag_engine.search(f"{title} {sanitized_desc}", top_k=2)
+    rag_context = ""
+    if rag_matches:
+        top_m = rag_matches[0]
+        rag_context = f"\nRelevant Knowledge Base SOP [{top_m['id']} - {top_m['title']}]:\n{top_m['excerpt']}\n"
+
+    # Step 3: LLM Analysis
     # Try Groq first
-    result = await analyze_with_groq(title, description, user_email)
+    result = await analyze_with_groq(title, sanitized_desc + rag_context, user_email)
     if result:
-        print("[AI Service] Analysis completed via Groq")
+        print("[AI Service] Analysis completed via Groq (RAG Grounded)")
         return result
 
     # Try Claude
-    result = await analyze_with_claude(title, description, user_email)
+    result = await analyze_with_claude(title, sanitized_desc + rag_context, user_email)
     if result:
-        print("[AI Service] Analysis completed via Claude")
+        print("[AI Service] Analysis completed via Claude (RAG Grounded)")
         return result
 
     # Fallback to mock
     print("[AI Service] Using mock analysis (no API keys configured)")
-    return mock_analyze_ticket(title, description, user_email)
+    return mock_analyze_ticket(title, sanitized_desc, user_email)
 
 
 async def generate_ai_reply_draft(title: str, description: str, category: str, severity: str, replies_summary: str = "") -> str:
     """
     Generate an AI draft reply for support employees to respond to a ticket.
-    Supports Groq/Claude with an intelligent template fallback.
+    Grounds response using RAG Knowledge Base and Enterprise documentation.
     """
+    from guardrails import PIISanitizer
+    from rag_engine import rag_engine
+
+    sanitized_desc, _ = PIISanitizer.sanitize(description)
+    rag_matches = rag_engine.search(f"{title} {sanitized_desc}", top_k=2)
+    kb_context = ""
+    if rag_matches:
+        kb_context = "\nVerified Knowledge Base Excerpts:\n" + "\n".join(
+            f"- [{d['id']}: {d['title']}]: {d['excerpt']}" for d in rag_matches
+        )
+
     api_key = get_groq_key()
     if api_key:
         try:
@@ -275,15 +304,17 @@ async def generate_ai_reply_draft(title: str, description: str, category: str, s
             client = Groq(api_key=api_key)
             prompt = f"""You are a professional IT support representative.
 Draft a helpful, polite, and technical solution or update for this support ticket.
+Ground your response using the verified knowledge base documentation where applicable.
 
 Ticket Title: {title}
 Category: {category}
 Severity: {severity}
-User Description: {description}
+User Description: {sanitized_desc}
+{kb_context}
 Conversation History: {replies_summary if replies_summary else "No prior replies."}
 
 Instructions:
-- Provide clear step-by-step troubleshooting or confirmation.
+- Provide clear step-by-step troubleshooting or confirmation referencing verified documentation.
 - Be professional, supportive, and concise.
 - Include a sign-off.
 - Do not include markdown code block quotes around the response.
@@ -291,11 +322,11 @@ Instructions:
             response = client.chat.completions.create(
                 model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
                 messages=[
-                    {"role": "system", "content": "You draft polite support ticket responses."},
+                    {"role": "system", "content": "You draft polite, verified support ticket responses."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=400,
+                max_tokens=450,
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
