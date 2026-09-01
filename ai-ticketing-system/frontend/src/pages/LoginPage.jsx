@@ -384,7 +384,7 @@ export default function LoginPage({ onLogin }) {
               </div>
               <div className="text-center">
                 <p className="text-xs font-semibold text-white">Employee</p>
-                <p className="text-[9px] text-neutral-600 mt-0.5">Ticket Mgt</p>
+                <p className="text-[9px] text-neutral-500 mt-0.5">My Dashboard</p>
               </div>
             </button>
 

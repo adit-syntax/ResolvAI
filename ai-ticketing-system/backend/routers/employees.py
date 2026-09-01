@@ -11,7 +11,10 @@ from datetime import datetime, timezone
 
 from database import get_db
 from models import Employee, Ticket, TicketTimeline
-from schemas import EmployeeCreate, EmployeeUpdate, EmployeeResponse, ActiveTicketInfo
+from schemas import (
+    EmployeeCreate, EmployeeUpdate, EmployeeResponse,
+    ActiveTicketInfo, EmployeeAvailabilityUpdate
+)
 from assignee_engine import find_alternative_assignee
 from auth_utils import require_admin, require_employee_or_admin
 
@@ -88,6 +91,169 @@ def get_active_tickets(db: Session = Depends(get_db), current_user=Depends(requi
             ))
 
     return results
+
+
+@router.get("/me/dashboard")
+def get_my_employee_dashboard(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_employee_or_admin),
+):
+    """
+    Get personal employee dashboard:
+    - Current employee profile
+    - Active / live assigned tickets
+    - Past / resolved assigned tickets
+    - Personal performance analytics (load, resolution rate, severity breakdown, SLA stats)
+    - Department queue for peer collaboration & suggestions
+    """
+    emp = None
+    if current_user.employee_id:
+        emp = db.get(Employee, current_user.employee_id)
+    if not emp:
+        emp = db.query(Employee).filter(Employee.email.ilike(current_user.email)).first()
+    if not emp and current_user.role == "admin":
+        emp = db.query(Employee).first()
+    if not emp:
+        # Fallback if logged in as general demo employee account
+        emp = db.query(Employee).filter(Employee.is_active == True).first()
+
+    emp_id = emp.id if emp else None
+
+    # Fetch all tickets assigned to this employee
+    all_assigned = (
+        db.query(Ticket)
+        .filter(Ticket.assignee_id == emp_id)
+        .order_by(desc(Ticket.created_at))
+        .all()
+        if emp_id
+        else []
+    )
+
+    active_statuses = ["New", "Assigned", "In Progress", "Pending Info"]
+    live_tickets = [t for t in all_assigned if t.status in active_statuses]
+    past_tickets = [t for t in all_assigned if t.status in ["Resolved", "Closed"]]
+
+    # Department queue (other open tickets in department for peer comments & suggestions)
+    dept_tickets = []
+    if emp and emp.department:
+        dept_tickets = (
+            db.query(Ticket)
+            .filter(
+                Ticket.department == emp.department,
+                Ticket.assignee_id != emp_id,
+                Ticket.status.in_(active_statuses)
+            )
+            .order_by(desc(Ticket.created_at))
+            .limit(10)
+            .all()
+        )
+
+    # Calculate metrics
+    total_count = len(all_assigned)
+    resolved_count = len(past_tickets)
+    active_count = len(live_tickets)
+    resolution_rate = round((resolved_count / total_count * 100), 1) if total_count > 0 else 100.0
+
+    # Severity distribution
+    severity_counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
+    category_counts = {}
+    for t in all_assigned:
+        cat = t.category or "Other"
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    for t in live_tickets:
+        sev = t.severity or "Medium"
+        if sev in severity_counts:
+            severity_counts[sev] += 1
+        else:
+            severity_counts[sev] = 1
+
+    # Average resolution time for this employee (in hours)
+    resolved_with_time = [
+        t for t in past_tickets if t.resolved_at and t.created_at
+    ]
+    avg_hours = emp.avg_resolution_time if emp and emp.avg_resolution_time else 2.5
+    if resolved_with_time:
+        total_time_h = sum(
+            (t.resolved_at - t.created_at).total_seconds() / 3600
+            for t in resolved_with_time
+        )
+        avg_hours = round(total_time_h / len(resolved_with_time), 1)
+
+    from routers.tickets import _format_ticket_response
+    formatted_live = [_format_ticket_response(t) for t in live_tickets]
+    formatted_past = [_format_ticket_response(t) for t in past_tickets]
+    formatted_dept = [_format_ticket_response(t) for t in dept_tickets]
+
+    # SLA breakdown for employee tickets
+    sla_counts = {"on_track": 0, "at_risk": 0, "breached": 0, "resolved": 0}
+    for t in formatted_live:
+        status = t.sla_status or "on_track"
+        if status in sla_counts:
+            sla_counts[status] += 1
+    for t in formatted_past:
+        sla_counts["resolved"] += 1
+
+    breached_count = sla_counts["breached"]
+    total_evaluated = total_count
+    sla_compliance_rate = round(((total_evaluated - breached_count) / total_evaluated * 100), 1) if total_evaluated > 0 else 100.0
+
+    return {
+        "employee": EmployeeResponse.model_validate(emp).model_dump() if emp else None,
+        "metrics": {
+            "total_assigned": total_count,
+            "active_tickets": active_count,
+            "resolved_tickets": resolved_count,
+            "resolution_rate": resolution_rate,
+            "avg_resolution_time_hours": avg_hours,
+            "current_load": emp.current_ticket_load if emp else active_count,
+            "max_capacity": 8,
+            "availability": emp.availability if emp else "Available",
+            "department": emp.department if emp else "Support",
+            "severity_breakdown": severity_counts,
+            "category_breakdown": category_counts,
+            "sla_breakdown": sla_counts,
+            "sla_compliance_rate": sla_compliance_rate,
+        },
+        "live_tickets": formatted_live,
+        "past_tickets": formatted_past,
+        "department_queue": formatted_dept,
+    }
+
+
+@router.patch("/me/availability")
+def update_my_availability(
+    data: EmployeeAvailabilityUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_employee_or_admin),
+):
+    """Update current employee's availability status (Available, Busy, On Leave)."""
+    valid_statuses = ["Available", "Busy", "On Leave"]
+    if data.availability not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Availability must be one of: {', '.join(valid_statuses)}")
+
+    emp = None
+    if current_user.employee_id:
+        emp = db.get(Employee, current_user.employee_id)
+    if not emp:
+        emp = db.query(Employee).filter(Employee.email.ilike(current_user.email)).first()
+    if not emp and current_user.role == "admin":
+        emp = db.query(Employee).first()
+    if not emp:
+        emp = db.query(Employee).filter(Employee.is_active == True).first()
+
+    if not emp:
+        raise HTTPException(status_code=404, detail="No matching employee profile found.")
+
+    emp.availability = data.availability
+    db.commit()
+    db.refresh(emp)
+
+    return {
+        "message": f"Availability updated to {emp.availability}",
+        "availability": emp.availability,
+        "employee_id": emp.id,
+    }
 
 
 @router.get("/{employee_id}", response_model=EmployeeResponse)

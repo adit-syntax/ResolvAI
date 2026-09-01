@@ -143,6 +143,9 @@ export const employeeApi = {
     ).toString();
     return request(`/employees/?${query}`);
   },
+  getDashboard: () => request('/employees/me/dashboard'),
+  updateMyAvailability: (availability) =>
+    request('/employees/me/availability', { method: 'PATCH', body: JSON.stringify({ availability }) }),
   get: (id) => request(`/employees/${id}`),
   create: (data) => request('/employees/', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

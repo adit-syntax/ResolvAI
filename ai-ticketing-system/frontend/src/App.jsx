@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import {
-  Headphones, ListTodo, Users, BarChart3,
+  Headphones, ListTodo, Users, BarChart3, LayoutDashboard,
   Menu, CircleDot, LogOut, User, ShieldCheck, FileText, Settings
 } from 'lucide-react';
 import { getAuthToken, setAuthToken, clearAuthToken, decodeJwtPayload } from './api.js';
@@ -21,6 +21,7 @@ import UserPortal from './pages/UserPortal.jsx';
 import TicketList from './pages/TicketList.jsx';
 import TicketDetail from './pages/TicketDetail.jsx';
 import EmployeeDirectory from './pages/EmployeeDirectory.jsx';
+import EmployeeDashboard from './pages/EmployeeDashboard.jsx';
 import Analytics from './pages/Analytics.jsx';
 
 // ─── Navigation Items (role-gated) ────────────────────────
@@ -31,13 +32,15 @@ const userNavItems = [
 ];
 
 const employeeNavItems = [
-  { path: '/tickets', icon: ListTodo, label: 'Ticket Management' },
+  { path: '/employee-dashboard', icon: LayoutDashboard, label: 'My Dashboard' },
+  { path: '/tickets', icon: ListTodo, label: 'All Tickets' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard' },
 ];
 
 const adminNavItems = [
   { path: '/tickets', icon: ListTodo, label: 'Ticket Management' },
   { path: '/employees', icon: Users, label: 'Employee Directory' },
+  { path: '/employee-dashboard', icon: LayoutDashboard, label: 'Staff Workspace' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics Dashboard' },
 ];
 
@@ -276,16 +279,18 @@ export default function App() {
                   <Route path="/tickets" element={<TicketList />} />
                   <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
                   <Route path="/employees" element={<EmployeeDirectory />} />
+                  <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="*" element={<Navigate to="/tickets" replace />} />
                 </>
               ) : auth.role === 'employee' ? (
                 /* ── Employee routes ── */
                 <>
+                  <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
                   <Route path="/tickets" element={<TicketList />} />
                   <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
                   <Route path="/analytics" element={<Analytics />} />
-                  <Route path="*" element={<Navigate to="/tickets" replace />} />
+                  <Route path="*" element={<Navigate to="/employee-dashboard" replace />} />
                 </>
               ) : (
                 /* ── User routes ── */

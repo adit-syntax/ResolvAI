@@ -111,6 +111,10 @@ class EmployeeUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class EmployeeAvailabilityUpdate(BaseModel):
+    availability: str = Field(..., description="Available, Busy, or On Leave")
+
+
 class EmployeeResponse(BaseModel):
     id: int
     name: str

@@ -28,8 +28,9 @@ function GoogleIcon({ className = 'w-4 h-4' }) {
 
 
 const DEMO_CREDENTIALS = {
-  user:  { email: 'user@gmail.com',       password: 'user123'     },
-  admin: { email: 'admin@gmail.com',      password: 'admin123'    },
+  user:     { email: 'user@gmail.com',        password: 'user123'     },
+  employee: { email: 'employee@company.com',  password: 'employee123' },
+  admin:    { email: 'admin@gmail.com',       password: 'admin123'    },
 };
 
 
@@ -520,23 +521,35 @@ export default function LandingPage({ onLogin }) {
             )}
 
             {/* Quick Demo Buttons */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-3 gap-2.5 mb-6">
               <button
+                type="button"
                 onClick={() => handleQuickLogin('user')}
-                className="flex flex-col items-center gap-1 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-[#22c55e]/50 hover:bg-[#22c55e]/5 transition-all group active:scale-95"
+                className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-[#22c55e]/50 hover:bg-[#22c55e]/5 transition-all group active:scale-95 text-center"
               >
                 <User className="w-4 h-4 text-[#22c55e]" />
-                <span className="text-xs font-semibold text-white">Demo User</span>
-                <span className="text-[10px] text-neutral-500">Support Portal</span>
+                <span className="text-[11px] font-semibold text-white">User</span>
+                <span className="text-[9px] text-neutral-500 truncate w-full">Support Portal</span>
               </button>
 
               <button
+                type="button"
+                onClick={() => handleQuickLogin('employee')}
+                className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-purple-500/50 hover:bg-purple-500/5 transition-all group active:scale-95 text-center"
+              >
+                <Headphones className="w-4 h-4 text-purple-400" />
+                <span className="text-[11px] font-semibold text-white">Employee</span>
+                <span className="text-[9px] text-neutral-500 truncate w-full">Staff Workspace</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleQuickLogin('admin')}
-                className="flex flex-col items-center gap-1 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group active:scale-95"
+                className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group active:scale-95 text-center"
               >
                 <ShieldCheck className="w-4 h-4 text-blue-400" />
-                <span className="text-xs font-semibold text-white">Demo Admin</span>
-                <span className="text-[10px] text-neutral-500">Admin Dashboard</span>
+                <span className="text-[11px] font-semibold text-white">Admin</span>
+                <span className="text-[9px] text-neutral-500 truncate w-full">Admin Panel</span>
               </button>
             </div>
 
