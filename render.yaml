@@ -21,6 +21,10 @@ services:
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
 
+      # Enables Google sign-in; must match the frontend VITE_GOOGLE_CLIENT_ID
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
       # PostgreSQL connection string from managed database
       - key: DATABASE_URL
         fromDatabase:

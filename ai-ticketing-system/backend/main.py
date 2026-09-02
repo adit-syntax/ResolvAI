@@ -27,32 +27,36 @@ from routers import auth as auth_router
 
 
 # ─── WebSocket Connection Manager ────────────────────────────────────────────
+# Shared manager lives in realtime.py so routers can broadcast without importing
+# main (which would be a circular import).
+from realtime import manager
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
+# ─── Background SLA automation ────────────────────────────────────────────────
 
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+async def _sla_sweep_loop():
+    """Periodically run SLA escalation + waiting-queue sweeps.
 
-    async def broadcast(self, message: dict):
-        disconnected = []
-        for connection in self.active_connections:
+    These were previously manual-only admin endpoints; running them on a timer
+    means SLA breaches get actioned and queued tickets get promoted without
+    someone clicking a button.
+    """
+    # ponytail: runs in-process in every worker — fine for a single instance.
+    # Add leader election or a dedicated cron service if you scale to many workers.
+    interval = int(os.getenv("SLA_SWEEP_INTERVAL_SECONDS", "300"))
+    while True:
+        try:
+            await asyncio.sleep(interval)
+            db = SessionLocal()
             try:
-                await connection.send_json(message)
-            except Exception:
-                disconnected.append(connection)
-        for conn in disconnected:
-            if conn in self.active_connections:
-                self.active_connections.remove(conn)
-
-
-manager = ConnectionManager()
+                await tickets.check_escalations(db=db, current_user=None)
+                tickets.check_waiting_tickets(db=db, current_user=None)
+            finally:
+                db.close()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[SLA Sweep] error: {e}")
 
 
 # ─── Demo account seed ───────────────────────────────────────────────────────
@@ -104,27 +108,11 @@ def _seed_demo_users(db):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all DB tables (SQLAlchemy DDL)
+    # Create tables for zero-config local/dev startup. In production Alembic
+    # ('alembic upgrade head') owns the schema; create_all is idempotent
+    # (checkfirst) so it's a no-op once migrations have run.
     Base.metadata.create_all(bind=engine)
     print("[Startup] Database tables created / verified.")
-
-    # Auto-migrate missing columns for existing SQLite DBs
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        migrations = [
-            ("tickets",      "sla_due_at",   "DATETIME"),
-            ("tickets",      "assigned_at",  "DATETIME"),
-            ("tickets",      "resolved_at",  "DATETIME"),
-            ("ticket_notes", "note_type",    "TEXT DEFAULT 'internal'"),
-            ("ticket_notes", "author_email", "TEXT"),
-        ]
-        for table, col, col_type in migrations:
-            try:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type};"))
-                conn.commit()
-                print(f"[Startup] Migration: added '{col}' to '{table}'.")
-            except Exception:
-                pass  # column already exists
 
     # Seed employee + user data
     db = SessionLocal()
@@ -134,11 +122,16 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Real-time broadcasts + background SLA sweeps need the running event loop.
+    manager.loop = asyncio.get_running_loop()
+    sweep_task = asyncio.create_task(_sla_sweep_loop())
+
     print("[Startup] ResolvAI ready.")
     print("[Startup] API docs: http://localhost:8000/docs")
 
     yield
 
+    sweep_task.cancel()
     print("[Shutdown] Closing connections...")
 
 
@@ -190,13 +183,15 @@ app.include_router(knowledge.router)
 # ─── WebSocket ───────────────────────────────────────────────────────────────
 
 from auth_utils import decode_token
+from jose import JWTError
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     """Authenticated WebSocket endpoint for real-time ticket alerts and updates."""
     if token:
-        payload = decode_token(token)
-        if not payload:
+        try:
+            decode_token(token)  # raises JWTError on invalid/expired token
+        except JWTError:
             await websocket.close(code=1008)  # 1008: Policy Violation
             return
     elif os.getenv("ENVIRONMENT") == "production":

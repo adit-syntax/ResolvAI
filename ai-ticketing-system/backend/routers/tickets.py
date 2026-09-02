@@ -23,9 +23,11 @@ from ai_service import analyze_ticket
 from routing_engine import route_ticket
 from assignee_engine import suggest_assignee, find_alternative_assignee
 from auth_utils import get_current_user, require_employee_or_admin, require_admin, require_auth
+from realtime import manager
 
 import os
 import json
+import asyncio
 import urllib.request
 
 router = APIRouter(prefix="/api/tickets", tags=["Tickets"])
@@ -393,12 +395,14 @@ async def create_ticket(
                 "status_change"
             )
 
-    # Dispatch Slack Notification for new tickets
-    _send_slack_notification(ticket, "New Ticket Submitted")
+    # Dispatch Slack Notification for new tickets.
+    # Runs in a worker thread so the blocking HTTP POST never stalls the event loop.
+    await asyncio.to_thread(_send_slack_notification, ticket, "New Ticket Submitted")
 
     db.commit()
     db.refresh(ticket)
 
+    manager.notify({"type": "tickets_updated"})
     return _format_ticket_response(ticket)
 
 
@@ -508,6 +512,7 @@ def update_ticket_status(
     if freed_employee_id:
         _promote_waiting_ticket(db, freed_employee_id)
 
+    manager.notify({"type": "tickets_updated"})
     return {"message": "Status updated", "old_status": old_status, "new_status": update.status}
 
 
@@ -547,6 +552,7 @@ def add_note(
 
     db.commit()
     db.refresh(note)
+    manager.notify({"type": "tickets_updated"})
     return note
 
 
@@ -648,6 +654,7 @@ def submit_feedback(
 
     db.commit()
     db.refresh(feedback)
+    manager.notify({"type": "tickets_updated"})
     return feedback
 
 
@@ -730,6 +737,7 @@ async def escalate_ticket(
         )
 
         db.commit()
+        manager.notify({"type": "tickets_updated"})
         return {"message": "Ticket escalated", "new_assignee": alt["employee_name"], "department": ticket.department}
 
     raise HTTPException(status_code=400, detail=alt["reason"])
@@ -809,6 +817,8 @@ async def check_escalations(db: Session = Depends(get_db), current_user=Depends(
             escalated_count += 1
 
     db.commit()
+    if escalated_count:
+        manager.notify({"type": "tickets_updated"})
     return {"message": f"Checked escalations, {escalated_count} tickets escalated"}
 
 
@@ -921,6 +931,8 @@ def check_waiting_tickets(db: Session = Depends(get_db), current_user=Depends(re
             promoted += 1
 
     db.commit()
+    if promoted:
+        manager.notify({"type": "tickets_updated"})
     return {
         "message": f"Waiting queue checked: {promoted} ticket(s) promoted, {len(waiting_tickets) - promoted} still waiting.",
         "promoted": promoted,
@@ -1004,6 +1016,7 @@ def create_reply(
 
     db.commit()
     db.refresh(reply)
+    manager.notify({"type": "tickets_updated"})
     return reply
 
 
@@ -1068,6 +1081,7 @@ def create_suggestion(
 
     db.commit()
     db.refresh(note)
+    manager.notify({"type": "tickets_updated"})
     return note
 
 
@@ -1164,6 +1178,7 @@ async def reply_feedback(
                 )
 
     db.commit()
+    manager.notify({"type": "tickets_updated"})
     return {"message": "Feedback recorded", "is_helpful": feedback.is_helpful}
 
 

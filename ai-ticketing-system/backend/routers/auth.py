@@ -21,6 +21,10 @@ from auth_utils import (
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
+# Must match the frontend's VITE_GOOGLE_CLIENT_ID. Used to verify that Google
+# tokens were actually issued for THIS app (audience binding).
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+
 
 # ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -139,28 +143,56 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
 
 async def _verify_google_token(id_token: Optional[str], access_token: Optional[str]) -> dict:
-    """Verify Google token cryptographically with Google API."""
+    """Verify a Google token with Google and confirm it was issued for THIS app.
+
+    The audience check (aud/azp == GOOGLE_CLIENT_ID) is the critical control:
+    without it, a valid Google token minted for any other OAuth app would be
+    accepted, allowing account takeover by email.
+    """
     env = os.getenv("ENVIRONMENT", "development").lower()
     # Test fixture mock token support in non-production
     if env != "production" and (id_token == "mock_google_oauth_token" or access_token == "mock_google_oauth_token"):
         return {"email": "google_user_demo@gmail.com", "name": "Google User Demo"}
 
+    # Fail closed in production if we can't verify the audience.
+    if env == "production" and not GOOGLE_CLIENT_ID:
+        print("[Auth] GOOGLE_CLIENT_ID not set — refusing Google sign-in in production.")
+        return {}
+
+    def _audience_ok(claims: dict) -> bool:
+        # Dev without a configured client id skips the check for local convenience;
+        # production is guarded above, so this only relaxes local testing.
+        if not GOOGLE_CLIENT_ID:
+            return True
+        return GOOGLE_CLIENT_ID in (claims.get("aud"), claims.get("azp"))
+
     async with httpx.AsyncClient(timeout=8.0) as client:
         if id_token:
-            resp = await client.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}")
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("email"):
-                    return data
-        if access_token:
             resp = await client.get(
-                "https://www.googleapis.com/oauth2/v3/userinfo",
-                headers={"Authorization": f"Bearer {access_token}"}
+                "https://oauth2.googleapis.com/tokeninfo", params={"id_token": id_token}
             )
             if resp.status_code == 200:
                 data = resp.json()
-                if data.get("email"):
+                if _audience_ok(data) and data.get("email"):
                     return data
+            return {}
+
+        if access_token:
+            # userinfo alone can't prove which app minted the token, so validate
+            # the access token's audience via tokeninfo first.
+            info = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo", params={"access_token": access_token}
+            )
+            if info.status_code != 200 or not _audience_ok(info.json()):
+                return {}
+            profile = await client.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if profile.status_code == 200:
+                pdata = profile.json()
+                if pdata.get("email"):
+                    return pdata
     return {}
 
 

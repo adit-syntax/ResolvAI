@@ -8,6 +8,7 @@ import json
 import os
 import re
 import random
+import asyncio
 from typing import Optional
 from schemas import AIAnalysisResult
 
@@ -190,7 +191,8 @@ async def analyze_with_groq(title: str, description: str, user_email: str) -> Op
             title=title, description=description, user_email=user_email
         )
 
-        response = client.chat.completions.create(
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
             model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
             messages=[
                 {"role": "system", "content": "You are a precise ticket analysis AI. Return only valid JSON."},
@@ -225,7 +227,8 @@ async def analyze_with_claude(title: str, description: str, user_email: str) -> 
             title=title, description=description, user_email=user_email
         )
 
-        response = client.messages.create(
+        response = await asyncio.to_thread(
+            client.messages.create,
             model=os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307"),
             max_tokens=500,
             messages=[{"role": "user", "content": prompt}],
@@ -319,7 +322,8 @@ Instructions:
 - Include a sign-off.
 - Do not include markdown code block quotes around the response.
 """
-            response = client.chat.completions.create(
+            response = await asyncio.to_thread(
+                client.chat.completions.create,
                 model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
                 messages=[
                     {"role": "system", "content": "You draft polite, verified support ticket responses."},

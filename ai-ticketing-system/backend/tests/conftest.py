@@ -11,12 +11,16 @@ if backend_dir not in sys.path:
 
 from main import app, _seed_demo_users
 from database import Base, engine, SessionLocal
+from seed_data import seed_employees
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # Seed the same fixtures the app creates on startup so the suite is
+        # self-contained (does not depend on a pre-existing ticketing.db).
+        seed_employees(db)
         _seed_demo_users(db)
     finally:
         db.close()
