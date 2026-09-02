@@ -112,10 +112,18 @@ async def test_knowledge_api_endpoints(async_client, employee_auth_headers):
     articles = res.json()
     assert len(articles) >= 5
 
-    # RAG Query
-    q_res = await async_client.post(
+    # Unauthenticated RAG query should be 401
+    unauth_q_res = await async_client.post(
         "/api/knowledge/query",
         json={"query": "How many vacation days do full time employees receive?", "top_k": 2}
+    )
+    assert unauth_q_res.status_code == 401
+
+    # Authenticated RAG Query
+    q_res = await async_client.post(
+        "/api/knowledge/query",
+        json={"query": "How many vacation days do full time employees receive?", "top_k": 2},
+        headers=employee_auth_headers
     )
     assert q_res.status_code == 200
     data = q_res.json()
@@ -125,7 +133,8 @@ async def test_knowledge_api_endpoints(async_client, employee_auth_headers):
     # PII Sanitize endpoint
     pii_res = await async_client.post(
         "/api/knowledge/sanitize-pii",
-        json={"text": "Here is my secret token: gsk_123456789012345678901234"}
+        json={"text": "Here is my secret token: gsk_123456789012345678901234"},
+        headers=employee_auth_headers
     )
     assert pii_res.status_code == 200
     assert "[REDACTED_SECRET_KEY]" in pii_res.json()["sanitized_text"]

@@ -67,7 +67,7 @@ def create_article(data: ArticleCreate, current_user=Depends(require_employee_or
 
 
 @router.post("/query")
-def query_knowledge_rag(data: RAGQueryRequest):
+def query_knowledge_rag(data: RAGQueryRequest, current_user=Depends(require_auth)):
     """
     RAG Semantic Playground:
     Retrieves top relevant chunks via Hybrid (Dense + BM25) search
@@ -78,7 +78,7 @@ def query_knowledge_rag(data: RAGQueryRequest):
 
 
 @router.get("/incidents")
-def get_live_incidents(db: Session = Depends(get_db)):
+def get_live_incidents(db: Session = Depends(get_db), current_user=Depends(require_employee_or_admin)):
     """
     Real-time semantic clustering across active tickets.
     Returns detected multi-user incident spikes and outage clusters.
@@ -105,7 +105,11 @@ def get_live_incidents(db: Session = Depends(get_db)):
 
 
 @router.get("/duplicates/{ticket_id}")
-def get_semantic_duplicates(ticket_id: int, db: Session = Depends(get_db)):
+def get_semantic_duplicates(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_employee_or_admin)
+):
     """Find semantic duplicates for a specific ticket using vector cosine similarity."""
     target = db.get(Ticket, ticket_id)
     if not target:
@@ -137,7 +141,11 @@ def get_semantic_duplicates(ticket_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/agent-trace/{ticket_id}")
-async def get_agent_trace(ticket_id: int, db: Session = Depends(get_db)):
+async def get_agent_trace(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_employee_or_admin)
+):
     """
     Run or retrieve the autonomous ReAct agent reasoning & tool execution trace for a ticket.
     """
@@ -155,7 +163,7 @@ async def get_agent_trace(ticket_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/sanitize-pii")
-def test_pii_sanitization(data: PIISanitizeRequest):
+def test_pii_sanitization(data: PIISanitizeRequest, current_user=Depends(require_auth)):
     """Utility endpoint to test PII and secrets redaction on arbitrary text."""
     sanitized, entities = PIISanitizer.sanitize(data.text)
     return {

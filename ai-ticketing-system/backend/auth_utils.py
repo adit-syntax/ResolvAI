@@ -21,7 +21,16 @@ from database import get_db
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production-use-a-long-random-string")
+DEFAULT_INSECURE_SECRET = "change-me-in-production-use-a-long-random-string"
+SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_INSECURE_SECRET)
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+
+if ENVIRONMENT == "production" and (not SECRET_KEY or SECRET_KEY == DEFAULT_INSECURE_SECRET):
+    raise RuntimeError(
+        "FATAL SECURITY ERROR: SECRET_KEY environment variable is not set or is using the insecure default. "
+        "You must generate and configure a secure random SECRET_KEY in production."
+    )
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 h
 

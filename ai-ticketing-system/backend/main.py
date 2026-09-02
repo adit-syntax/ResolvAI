@@ -59,9 +59,15 @@ manager = ConnectionManager()
 
 def _seed_demo_users(db):
     """
-    Create the three demo accounts on first startup (idempotent).
-    All passwords are bcrypt-hashed — never stored in plaintext.
+    Create the demo accounts on development/staging startup (idempotent).
+    Disabled in production unless explicitly enabled via SEED_DEMO_USERS=true.
     """
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    seed_allowed = os.getenv("SEED_DEMO_USERS", "false").lower() == "true" or env != "production"
+    if not seed_allowed:
+        print("[Startup] Production environment detected: Default demo accounts skipped for security.")
+        return
+
     from models import User
     from auth_utils import get_password_hash
 
