@@ -2,7 +2,7 @@
 Pydantic schemas for request/response validation.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -46,8 +46,7 @@ class ReplyResponse(BaseModel):
     feedback_helpful: Optional[bool]
     created_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TicketResponse(BaseModel):
@@ -82,8 +81,7 @@ class TicketResponse(BaseModel):
     assignee_availability: Optional[str] = None
     replies: List[ReplyResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Employee Schemas ─────────────────────────────────────────────────
@@ -129,8 +127,7 @@ class EmployeeResponse(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ActiveTicketInfo(BaseModel):
@@ -173,8 +170,7 @@ class FeedbackResponse(BaseModel):
     comment: Optional[str]
     created_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Note Schema ─────────────────────────────────────────────────────
@@ -197,8 +193,7 @@ class NoteResponse(BaseModel):
     note_type: str
     created_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Suggestion Schema ───────────────────────────────────────────────
@@ -219,8 +214,7 @@ class SuggestionResponse(BaseModel):
     note_type: str
     created_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Timeline Schema ─────────────────────────────────────────────────
@@ -235,8 +229,7 @@ class TimelineResponse(BaseModel):
     actor: str
     created_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Notification Schema ─────────────────────────────────────────────
@@ -251,8 +244,7 @@ class NotificationResponse(BaseModel):
     is_read: bool
     created_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── Analytics Schema ────────────────────────────────────────────────

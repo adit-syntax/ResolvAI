@@ -3,7 +3,8 @@
  * Focuses on real capabilities, clear product workflows, and zero artificial metrics.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
 import DemoOverlayModal from '../components/DemoOverlayModal.jsx';
@@ -16,6 +17,52 @@ import {
   Search, Users, Clock, FileText, Check, Play, Sparkles, BookOpen
 } from 'lucide-react';
 import { authApi, setAuthToken } from '../api.js';
+
+
+/* ── ScrollReveal: fades + slides up on scroll ─────────────────────────── */
+function ScrollReveal({ children, delay = 0, className = '' }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 22 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ── HeroMeshBackground: slow blobs + mouse-tracking glow ──────────────── */
+function HeroMeshBackground() {
+  const containerRef = useRef(null);
+  const [pos, setPos] = React.useState({ x: 50, y: 50 });
+  const handleMouseMove = useCallback((e) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPos({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 });
+  }, []);
+  return (
+    <div ref={containerRef} onMouseMove={handleMouseMove} className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      <motion.div className="absolute rounded-full"
+        style={{ width: 600, height: 600, background: 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)', left: '-10%', top: '-20%', filter: 'blur(60px)' }}
+        animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div className="absolute rounded-full"
+        style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(34,197,94,0.05) 0%, transparent 70%)', right: '-5%', bottom: '5%', filter: 'blur(80px)' }}
+        animate={{ x: [0, -25, 0], y: [0, -15, 0] }}
+        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <div className="absolute rounded-full transition-all duration-700 ease-out"
+        style={{ width: 400, height: 400, background: 'radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)', left: `calc(${pos.x}% - 200px)`, top: `calc(${pos.y}% - 200px)`, filter: 'blur(50px)' }}
+      />
+    </div>
+  );
+}
 
 function GoogleIcon({ className = 'w-4 h-4' }) {
   return (
@@ -275,32 +322,62 @@ export default function LandingPage({ onLogin }) {
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" /> Admin Demo
             </button>
 
-            <button
+            <motion.button
               id="header-sign-in-btn"
               onClick={() => { setAuthTab('login'); setShowLoginModal(true); }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs cursor-pointer"
+              whileHover={{ scale: 1.04, boxShadow: '0 0 18px rgba(34,197,94,0.35)' }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.2 }}
             >
               Sign In <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </motion.button>
           </div>
 
         </div>
       </header>
 
       {/* ─── 2. HERO SECTION ────────────────────────────────────────────── */}
-      <section className="pt-16 pb-16 px-4 sm:px-6 max-w-5xl mx-auto text-center">
+      <section className="relative pt-16 pb-16 px-4 sm:px-6 max-w-5xl mx-auto text-center overflow-hidden">
+        <HeroMeshBackground />
         
         {/* Simple Honest Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-400 mb-6">
-          <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-400 mb-6 overflow-hidden"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22c55e]" />
+          </span>
           <span>Intelligent Helpdesk &amp; Workload Management</span>
-        </div>
+          <motion.span
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent"
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
+          />
+        </motion.div>
 
         {/* Hero Title */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-5">
-          Support Ticketing, <br className="hidden sm:inline" />
-          Organized and Automated.
-        </h1>
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-5"
+        >
+          Support Ticketing,{' '}
+          <br className="hidden sm:inline" />
+          <span style={{ background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #86efac 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', filter: 'drop-shadow(0 0 24px rgba(34,197,94,0.3))' }}>
+            Organized
+          </span>
+          {' '}and{' '}
+          <span style={{ background: 'linear-gradient(135deg, #22c55e 0%, #4ade80 60%, #86efac 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', filter: 'drop-shadow(0 0 24px rgba(34,197,94,0.28))' }}>
+            Automated
+          </span>
+          .
+        </motion.h1>
 
         {/* Subtitle */}
         <p className="max-w-2xl mx-auto text-sm sm:text-base text-neutral-400 leading-relaxed mb-8">
@@ -309,12 +386,15 @@ export default function LandingPage({ onLogin }) {
 
         {/* CTAs */}
         <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
-          <button
+          <motion.button
             onClick={() => handleQuickLogin('user')}
-            className="px-5 py-2.5 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors inline-flex items-center gap-2"
+            className="px-5 py-2.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs inline-flex items-center gap-2"
+            whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(16,185,129,0.4)' }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.22 }}
           >
             <Headphones className="w-4 h-4" /> Open Support Portal
-          </button>
+          </motion.button>
 
           <button
             onClick={() => handleQuickLogin('admin')}
@@ -332,8 +412,8 @@ export default function LandingPage({ onLogin }) {
         </div>
 
         {/* ─── REAL TICKET PROCESSING DEMO WIDGET ─────────────────────── */}
-        <div className="text-left bg-neutral-900/60 border border-neutral-800 rounded-2xl p-5 sm:p-6 shadow-lg max-w-4xl mx-auto">
-          <div className="pb-4 mb-4 border-b border-neutral-800">
+        <div className="text-left rounded-2xl p-5 sm:p-6 shadow-2xl max-w-4xl mx-auto" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: '0 0 0 1px rgba(34,197,94,0.06), 0 24px 60px rgba(0,0,0,0.5)' }}>
+          <div className="pb-4 mb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
             <span className="text-xs font-semibold text-white uppercase tracking-wider block">
               How a Ticket is Handled
             </span>
@@ -343,27 +423,35 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           {/* Example Selector Chips */}
-          <div className="flex flex-wrap gap-2 mb-5">
+          <div className="relative flex flex-wrap gap-2 mb-5">
             {REAL_TICKET_EXAMPLES.map((item, idx) => (
               <button
                 key={item.id}
                 onClick={() => setSelectedExampleIndex(idx)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                  idx === selectedExampleIndex
-                    ? 'bg-neutral-800 text-white border-neutral-600'
-                    : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-700'
-                }`}
+                className="relative px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 border"
+                style={{ borderColor: idx === selectedExampleIndex ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.07)', color: idx === selectedExampleIndex ? '#fff' : '#737373', zIndex: 1 }}
               >
-                {item.title}
+                {idx === selectedExampleIndex && (
+                  <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-lg" style={{ background: 'rgba(34,197,94,0.12)' }} transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
+                )}
+                <span className="relative z-10">{item.title}</span>
               </button>
             ))}
           </div>
 
           {/* Output Card */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedExampleIndex}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
             
             {/* Input Ticket Box */}
-            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-2.5">
+            <div className="p-4 rounded-xl space-y-2.5" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
                 Ticket Information
               </span>
@@ -382,7 +470,7 @@ export default function LandingPage({ onLogin }) {
             </div>
 
             {/* Processing Result */}
-            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-2.5 flex flex-col justify-between">
+            <div className="p-4 rounded-xl space-y-2.5 flex flex-col justify-between" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div>
                 <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
                   System Resolution
@@ -396,12 +484,14 @@ export default function LandingPage({ onLogin }) {
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-neutral-800 text-[11px] text-neutral-500">
+              <div className="pt-2 text-[11px] text-neutral-500" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 Documentation: <span className="text-neutral-300">{selectedExample.matchedSop}</span>
               </div>
             </div>
 
-          </div>
+            </motion.div>
+          </AnimatePresence>
+
         </div>
 
       </section>
@@ -419,7 +509,8 @@ export default function LandingPage({ onLogin }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3">
+          <ScrollReveal delay={0}>
+          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3 h-full">
             <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
               1
             </div>
@@ -428,8 +519,10 @@ export default function LandingPage({ onLogin }) {
               Users submit issues via the support portal. The system reads the description and automatically determines the category and urgency.
             </p>
           </div>
+          </ScrollReveal>
 
-          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3">
+          <ScrollReveal delay={0.12}>
+          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3 h-full">
             <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
               2
             </div>
@@ -438,8 +531,10 @@ export default function LandingPage({ onLogin }) {
               ResolvAI searches your organization's documentation. If a matching SOP is found, it generates a verified answer immediately.
             </p>
           </div>
+          </ScrollReveal>
 
-          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3">
+          <ScrollReveal delay={0.24}>
+          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3 h-full">
             <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
               3
             </div>
@@ -448,6 +543,7 @@ export default function LandingPage({ onLogin }) {
               Unresolved issues are assigned to the employee with matching skills and lowest current workload for real-time chat resolution.
             </p>
           </div>
+          </ScrollReveal>
 
         </div>
       </section>
@@ -630,17 +726,17 @@ export default function LandingPage({ onLogin }) {
                   className="w-full p-4 text-left flex items-center justify-between text-xs sm:text-sm font-semibold text-white hover:text-[#22c55e] transition-colors"
                 >
                   <span>{item.q}</span>
-                  {isOpen ? (
-                    <ChevronUp className="w-4 h-4 text-[#22c55e] flex-shrink-0 ml-3" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0 ml-3" />
-                  )}
+  <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.25 }}>
+                    <ChevronDown className={`w-4 h-4 flex-shrink-0 ml-3 ${isOpen ? 'text-[#22c55e]' : 'text-neutral-500'}`} />
+                  </motion.div>
                 </button>
-                {isOpen && (
-                  <div className="px-4 pb-4 text-xs text-neutral-400 leading-relaxed border-t border-neutral-800/80 pt-3">
-                    {item.a}
-                  </div>
-                )}
+<AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div key="faq-body" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden">
+                        <div className="px-4 pb-4 text-xs text-neutral-400 leading-relaxed border-t border-neutral-800/80 pt-3">{item.a}</div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
               </div>
             );
           })}
@@ -723,10 +819,10 @@ export default function LandingPage({ onLogin }) {
       />
 
       {/* ─── 10. AUTHENTICATION & REGISTRATION MODAL ─────────────────────── */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          
-          <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sm:p-7 shadow-xl">
+      <AnimatePresence>
+        {showLoginModal && (
+          <motion.div key="auth-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div key="auth-modal" initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sm:p-7 shadow-xl">
             <button
               onClick={() => setShowLoginModal(false)}
               className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
@@ -745,23 +841,17 @@ export default function LandingPage({ onLogin }) {
             <div className="flex bg-neutral-950 p-1 rounded-lg border border-neutral-800 mb-5">
               <button
                 onClick={() => { setAuthTab('login'); setLoginError(''); }}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${
-                  authTab === 'login'
-                    ? 'bg-[#22c55e] text-black font-bold'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
+                className={`relative flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors duration-200 z-10 ${authTab === 'login' ? 'text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
               >
-                <LogIn className="w-3.5 h-3.5" /> Sign In
+                {authTab === 'login' && <motion.span layoutId="auth-tab-pill" className="absolute inset-0 rounded-md bg-[#22c55e]" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+                <span className="relative z-10 flex items-center gap-1.5"><LogIn className="w-3.5 h-3.5" /> Sign In</span>
               </button>
               <button
                 onClick={() => { setAuthTab('register'); setRegError(''); }}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${
-                  authTab === 'register'
-                    ? 'bg-[#22c55e] text-black font-bold'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
+                className={`relative flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors duration-200 z-10 ${authTab === 'register' ? 'text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
               >
-                <UserPlus className="w-3.5 h-3.5" /> Create Account
+                {authTab === 'register' && <motion.span layoutId="auth-tab-pill" className="absolute inset-0 rounded-md bg-[#22c55e]" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+                <span className="relative z-10 flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" /> Create Account</span>
               </button>
             </div>
 
@@ -937,10 +1027,10 @@ export default function LandingPage({ onLogin }) {
               </form>
             )}
 
-          </div>
-
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

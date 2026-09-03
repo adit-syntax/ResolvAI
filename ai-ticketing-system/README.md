@@ -1,44 +1,83 @@
-# 🤖 ResolvAI — Smart AI Ticketing & Autonomous Helpdesk System
+# 🤖 ResolvAI — Autonomous AI-Native Helpdesk & Ticketing Platform
 
-> **ResolvAI** is an enterprise-grade AI internal ticketing platform. It uses Large Language Models (LLM) to read incoming tickets, classify severity and sentiment, auto-resolve common inquiries, route complex issues to the best-suited employees based on skill tags and workload, track SLAs with real-time countdown badges, and notify teams via Slack. Ships production-ready: JWT authentication, role-based access control, rate limiting, and one-click Render + PostgreSQL deployment.
+[![Backend Tests](https://img.shields.io/badge/pytest-28%20passed%20%7C%20100%25-brightgreen.svg)](#-test-suite)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.x-61DAFB.svg)](https://react.dev/)
+[![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+
+> **ResolvAI** is a production-grade, AI-native internal helpdesk and workload orchestration platform. Built for modern enterprise engineering teams, it pairs an **Autonomous ReAct Agent loop**, a **Hybrid Vector RAG Engine** (Dense Cosine Similarity + BM25 reciprocal rank fusion), an **Enterprise PII Guardrail** with Luhn verification, and **Semantic Duplicate Detection & Outage Clustering** with a real-time React 18 frontend and WebSocket chat bus.
 
 ---
 
-## 🏛️ Architecture
+## 🏛️ System Architecture
 
 ```
                                   +---------------------------------------+
                                    |         Web Frontend (React 18)       |
-                                   | (Landing, User Portal, Admin Dashboard|
-                                   |    Settings Modal, Role-Based Auth)   |
+                                   | (Framer Motion UI, Live Chat Bus,     |
+                                   |  Executive Analytics & Workspaces)    |
                                   +-------------------+-------------------+
                                                       |
-                                          HTTP REST / WebSocket
+                                           HTTP REST / WebSocket
                                                       |
                                                       v
                                   +---------------------------------------+
                                    |         Backend API (FastAPI)         |
-                                   |  (Routers: Auth, Tickets, Employees,  |
-                                   |   Analytics, Settings — JWT + RBAC)   |
+                                   | (Auth, RBAC, SlowAPI Rate Limiter,    |
+                                   |  Async Background SLA Automation)     |
                                   +---------+-------------------+---------+
                                             |                   |
                      +----------------------+                   +-----------------------+
                      |                                                                  |
                      v                                                                  v
     +---------------------------------+                               +----------------------------------+
-    |         AI Engine Layer         |                               |     Routing & SLA Logic        |
-    |  - Groq LLaMA 3.3 70B LLM       |                               |  - Department Category Mapping   |
-    |  - Auto-Resolution Engine       |                               |  - Skill Tag Match & Load Balancing|
-    |  - AI Smart Reply Assistant     |                               |  - SLA Status & Escalation Timers|
-    |  - Offline Keyword Fallback     |                               +----------------+-----------------+
+    |      AI Native Engine Suite     |                               |     Routing & Workload Graph     |
+    |  - Enterprise PII Guardrails    |                               |  - Workload Balancing Algorithm  |
+    |  - Hybrid Vector RAG (384-D)    |                               |  - Dynamic Skill-Tag Matcher     |
+    |  - Autonomous ReAct Agent Loop  |                               |  - Background SLA Sweep Engine   |
+    |  - Semantic Outage Clustering   |                               +----------------+-----------------+
+    |  - Groq LLaMA 3.3 70B & Claude  |                                                |
     +----------------+----------------+                                                |
                      |                                                                 |
                      v                                                                 v
     +---------------------------------+                               +----------------------------------+
-    |  Settings & Database Layer      |                               |      External Dispatches         |
-    |  - SQLite (dev) / PostgreSQL    |                               |  - Real-time WebSockets (`/ws`)  |
-    |  - SystemSetting key-value DB   |                               |  - Slack Webhook Cards           |
+    |    Database & Persistence       |                               |      External Dispatches         |
+    |  - PostgreSQL (prod) / SQLite   |                               |  - Real-time WebSockets (`/ws`)  |
+    |  - Alembic Schema Migrations    |                               |  - Slack Incident Alerts         |
     +---------------------------------+                               +----------------------------------+
+```
+
+---
+
+## 🧠 AI-Native Architecture & Core Innovations
+
+ResolvAI implements five foundational AI engineering modules:
+
+### 1. 🛡️ Enterprise PII Sanitizer & Security Guardrail (`guardrails.py`)
+- **Zero-Data-Leakage Design**: Sanitizes all customer input before dispatching to external LLMs.
+- **Entity Detection**: Masks Credit Cards (with **Luhn checksum** validation to prevent false positives), API Keys (`sk_`, `gsk_`, JWTs, AWS credentials), Passwords, SSNs, and connection strings.
+- **Audit Logging**: Emits structured redaction summaries (`[AI Guardrail] Redacted: 1 credit_card, 1 api_key`).
+
+### 2. 🔍 Hybrid Vector RAG Engine (`rag_engine.py`)
+- **384-Dimensional Dense Embeddings**: Generates semantic vectors for enterprise documentation and SOP runbooks.
+- **BM25 Sparse Keyword Inverted Index**: Ensures exact token matching for system codes, error identifiers, and commands.
+- **Reciprocal Rank Fusion**: Combines dense vector cosine similarity and sparse keyword scores for grounded document retrieval.
+- **Automatic Source Citations**: Includes verified SOP IDs and excerpts in generated responses.
+
+### 3. 🤖 Autonomous ReAct Agent Loop (`agent_tools.py`)
+- **Thought → Action → Observation Loop**: Iteratively reasons over support issues, executes diagnostic tools, and inspects observations before producing final resolutions.
+- **Integrated Tool Registry**: Tools for `search_knowledge_base`, `check_system_health` (real-time microservice status), `inspect_user_account`, and `verify_invoice`.
+- **Explainable Trace**: Logs structured reasoning steps viewable in the support dashboard for complete AI auditability.
+
+### 4. ⚡ Semantic Duplicate Detection & Outage Clustering (`clustering_engine.py`)
+- **Vector Cosine Similarity Thresholding**: Instantly identifies duplicate tickets submitted across departments (>0.85 similarity score).
+- **Time-Sliding Window Clustering**: Detects cascading infrastructure outages when ≥3 correlated tickets emerge within a 60-minute window, alerting engineering leads immediately.
+
+### 5. 🎯 Multi-Provider LLM Orchestration (`ai_service.py`)
+- **Primary Inference**: High-throughput **Groq LLaMA 3.3 70B Versatile** with strict JSON schema validation.
+- **Secondary Fallback**: **Anthropic Claude 3 Haiku** for high-reliability failover.
+- **Deterministic Offline Fallback**: Keyword rule matrix for uninterrupted local development and testing.--+
 ```
 
 ---
@@ -426,22 +465,59 @@ ai-ticketing-system/
 
 ---
 
-## 🧪 Running the Test Suite
+## 🧪 Test Suite
+
+The system includes a comprehensive, automated test suite covering all critical AI engineering, security, and real-time execution paths.
 
 ```bash
 cd backend
-python -m pytest tests -q
+python -m pytest tests -v
 ```
 
-Covers the auth API (login/register/JWT), RBAC security (401/403 enforcement per role), and ticket API behaviour.
+```
+============================= test session starts =============================
+tests/test_auth_api.py::test_login_success PASSED                        [  3%]
+tests/test_auth_api.py::test_login_invalid_password PASSED               [  7%]
+tests/test_auth_api.py::test_self_registration PASSED                    [ 10%]
+tests/test_auth_api.py::test_google_oauth_token_exchange PASSED          [ 14%]
+tests/test_auth_api.py::test_me_endpoint PASSED                          [ 17%]
+tests/test_employee_dashboard.py::test_employee_dashboard_endpoint PASSED [ 21%]
+tests/test_employee_dashboard.py::test_employee_availability_toggle PASSED [ 25%]
+tests/test_employee_dashboard.py::test_user_cannot_access_employee_dashboard PASSED [ 28%]
+tests/test_genai_suite.py::test_pii_sanitizer PASSED                     [ 32%]
+tests/test_genai_suite.py::test_dense_embedder_and_cosine PASSED         [ 35%]
+tests/test_genai_suite.py::test_hybrid_rag_search_and_grounding PASSED   [ 39%]
+tests/test_genai_suite.py::test_semantic_duplicate_detection PASSED      [ 42%]
+tests/test_genai_suite.py::test_incident_outage_clustering PASSED        [ 46%]
+tests/test_genai_suite.py::test_autonomous_react_agent_flow PASSED       [ 50%]
+tests/test_genai_suite.py::test_knowledge_api_endpoints PASSED           [ 53%]
+tests/test_rbac_security.py::test_analytics_rbac PASSED                  [ 57%]
+tests/test_rbac_security.py::test_settings_admin_only PASSED             [ 60%]
+tests/test_rbac_security.py::test_employee_directory_rbac PASSED         [ 64%]
+tests/test_rbac_security.py::test_knowledge_security_rbac PASSED         [ 67%]
+tests/test_rbac_security.py::test_google_auth_forgery_protection PASSED  [ 71%]
+tests/test_realtime.py::test_notify_broadcasts_to_connected_clients PASSED [ 75%]
+tests/test_realtime.py::test_notify_is_noop_before_startup PASSED        [ 78%]
+tests/test_realtime.py::test_sla_sweeps_callable_outside_request PASSED  [ 82%]
+tests/test_tickets_api.py::test_create_ticket_authenticated PASSED       [ 85%]
+tests/test_tickets_api.py::test_create_ticket_unauthenticated PASSED     [ 89%]
+tests/test_tickets_api.py::test_customer_ticket_list_scoping PASSED      [ 92%]
+tests/test_tickets_api.py::test_internal_notes_access_control PASSED     [ 96%]
+tests/test_tickets_api.py::test_suggestions_access_control PASSED        [100%]
+
+======================= 28 passed in 1.58s =======================
+```
 
 ---
 
-## 🔮 Future Improvements
+## 🔒 Production Security & Hardening Checklist
 
-1. 🧠 **Vector DB & RAG (Retrieval-Augmented Generation)**:
-   - Integrate ChromaDB or FAISS vector database to store embeddings of all resolved tickets and internal documentation.
-   - Enables semantic similarity search so the AI learns from past human resolutions to answer complex technical queries automatically.
+- [x] **Zero-Leakage PII Guardrails**: Strips Credit Cards (Luhn validated), API keys, and credentials before LLM dispatch.
+- [x] **Strict RBAC Guards**: Endpoints enforce role tiering (`Customer`, `Employee`, `Admin`) with 401/403 validation.
+- [x] **Rate Limiting**: SlowAPI protection on `/api/auth/login` (10 req/min) and global routes (100 req/min).
+- [x] **Stateless JWT Tokens**: HS256-signed tokens with strict expiry and audience validation.
+- [x] **PostgreSQL Ready**: One-click schema migration with Alembic and connection pooling via `pool_pre_ping`.
+- [x] **Authenticated WebSocket**: Ticket broadcast bus requires signed JWT tokens.
 2. 🔐 **Enterprise Single Sign-On (SSO)**:
    - SAML 2.0 / OpenID Connect integration for Okta, Azure AD, and Google Workspace.
 3. ⚡ **Background Workers & Scheduling**:
