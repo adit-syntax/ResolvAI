@@ -77,8 +77,13 @@ ResolvAI implements five foundational AI engineering modules:
 ### 5. 🎯 Multi-Provider LLM Orchestration (`ai_service.py`)
 - **Primary Inference**: High-throughput **Groq LLaMA 3.3 70B Versatile** with strict JSON schema validation.
 - **Secondary Fallback**: **Anthropic Claude 3 Haiku** for high-reliability failover.
-- **Deterministic Offline Fallback**: Keyword rule matrix for uninterrupted local development and testing.--+
-```
+- **Deterministic Offline Fallback**: Keyword rule matrix for uninterrupted local development and testing.
+
+### 6. 📊 Data Science & Operational Analytics Engine (`routers/analytics.py`)
+- **Descriptive & Diagnostic Analytics**: Aggregates ticket lifecycles across multidimensional dimensions (department workload distribution, category frequency, severity spread).
+- **Time-Series Incident Velocity**: Tracks 30-day creation vs. resolution volume trends for forecasting staffing needs and identifying bottlenecks.
+- **Operational SLA & MTTR Metrics**: Calculates Mean Time to Resolution (MTTR in hours) and automated auto-resolution effectiveness scores based on user feedback.
+- **Interactive Visualizations**: Powered by **Recharts** for real-time executive visibility.
 
 ---
 
@@ -170,16 +175,19 @@ graph TD
 
 | Layer | Technology | Description |
 |-------|-----------|-------------|
-| **Frontend Core** | React 18, Vite | SPA with fast hot-reloading & clean modular component architecture |
-| **Styling & Icons** | Tailwind CSS 3, Lucide Icons | Modern dark-mode glassmorphic design system |
-| **Data Visualization** | Recharts | Interactive department load, category, and sentiment analytics |
-| **Backend API** | Python 3.10+, FastAPI | High-performance async REST API framework |
-| **Database & ORM** | SQLite (dev) / PostgreSQL (prod), SQLAlchemy | Zero-config SQLite locally; managed PostgreSQL in production via `DATABASE_URL` |
-| **AI / LLM Engine** | Groq (`llama-3.3-70b-versatile`) | Ultra-fast LLM inference with smart offline fallback mode |
+| **Frontend Core** | React 18, Vite | Modular SPA architecture with hot-module reloading and responsive layouts |
+| **Motion & Animation** | Framer Motion 12 | Smooth layout animations, reactive hero mesh glow, tab pill spring physics (`layoutId`), and scroll reveals |
+| **Styling & Icons** | Tailwind CSS 3, Lucide Icons | Modern dark-mode glassmorphic design system (`backdrop-blur`) |
+| **Data Science & Analytics** | Recharts, SQLAlchemy Aggregations | Executive time-series trends (30-day ticket velocity), MTTR calculations, category distributions, and team load analytics |
+| **Backend API** | Python 3.10+, FastAPI | High-performance async REST API framework with Pydantic v2 validation |
+| **Database & ORM** | SQLite (dev) / PostgreSQL (prod), SQLAlchemy 2.0 | Zero-config SQLite locally; managed PostgreSQL in production via `DATABASE_URL` with `pool_pre_ping` |
+| **AI / LLM Engine** | Groq (`llama-3.3-70b-versatile`), Claude 3 Haiku | Multi-provider inference orchestration with fallback to deterministic rule matrix |
+| **Vector Search & RAG** | 384-D Dense Vectors, BM25 Sparse Index | Hybrid Reciprocal Rank Fusion (RRF) for grounded enterprise runbook matching |
+| **Unsupervised ML** | Cosine Similarity, Sliding-Window Clustering | Real-time semantic duplicate detection and multi-user incident cluster tracking |
 | **Real-time Engine** | WebSockets (`/ws`) | Live updates for tickets, chat replies, and system notifications |
 | **Notifications** | Slack Incoming Webhooks | Rich alert cards dispatched on urgent tickets or SLA escalations |
-| **Auth & Identity** | JWT (HS256) + bcrypt, Google OAuth | Server-signed tokens (24 h expiry), bcrypt-hashed passwords, role-based access control (`admin` / `employee` / `user`); Google sign-in exchanges tokens server-side |
-| **API Protection** | slowapi | Per-IP rate limiting: 100 req/min global, 10 req/min on the login endpoint; optional Redis backend via `REDIS_URL` |
+| **Auth & Identity** | JWT (HS256) + bcrypt, Google OAuth | Server-signed tokens (24 h expiry), bcrypt-hashed passwords, role-based access control (`admin` / `employee` / `user`) |
+| **API Protection** | slowapi | Per-IP rate limiting: 100 req/min global, 10 req/min on login; optional Redis backend |
 | **Migrations** | Alembic | Versioned schema migrations (`backend/alembic/`) |
 
 ---
