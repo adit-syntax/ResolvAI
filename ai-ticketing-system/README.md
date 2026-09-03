@@ -1,6 +1,6 @@
 # 🤖 ResolvAI — Autonomous AI-Native Helpdesk & Ticketing Platform
 
-[![Backend Tests](https://img.shields.io/badge/pytest-28%20passed%20%7C%20100%25-brightgreen.svg)](#-test-suite)
+[![Backend Tests](https://img.shields.io/badge/pytest-28%20passed%20%7C%20100%25-brightgreen.svg)](#-testing)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.x-61DAFB.svg)](https://react.dev/)
@@ -466,72 +466,16 @@ ai-ticketing-system/
 
 ---
 
-## ⚠️ Known Limitations
+## 🧪 Testing
 
-1. **Demo accounts**: seeded on every startup for quick evaluation. Remove `_seed_demo_users()` from `main.py` and rotate the admin password for real deployments.
-2. **Groq Rate Limits**: Groq's free tier has rate limits; the built-in offline engine handles rate limit fallbacks seamlessly without breaking requests.
+The backend includes automated tests covering authentication, RBAC, WebSocket dispatches, and the AI/RAG pipelines.
 
----
-
-## 🧪 Test Suite
-
-The system includes a comprehensive, automated test suite covering all critical AI engineering, security, and real-time execution paths.
+To run the suite:
 
 ```bash
 cd backend
-python -m pytest tests -v
+python -m pytest tests/ -q
 ```
-
-```
-============================= test session starts =============================
-tests/test_auth_api.py::test_login_success PASSED                        [  3%]
-tests/test_auth_api.py::test_login_invalid_password PASSED               [  7%]
-tests/test_auth_api.py::test_self_registration PASSED                    [ 10%]
-tests/test_auth_api.py::test_google_oauth_token_exchange PASSED          [ 14%]
-tests/test_auth_api.py::test_me_endpoint PASSED                          [ 17%]
-tests/test_employee_dashboard.py::test_employee_dashboard_endpoint PASSED [ 21%]
-tests/test_employee_dashboard.py::test_employee_availability_toggle PASSED [ 25%]
-tests/test_employee_dashboard.py::test_user_cannot_access_employee_dashboard PASSED [ 28%]
-tests/test_genai_suite.py::test_pii_sanitizer PASSED                     [ 32%]
-tests/test_genai_suite.py::test_dense_embedder_and_cosine PASSED         [ 35%]
-tests/test_genai_suite.py::test_hybrid_rag_search_and_grounding PASSED   [ 39%]
-tests/test_genai_suite.py::test_semantic_duplicate_detection PASSED      [ 42%]
-tests/test_genai_suite.py::test_incident_outage_clustering PASSED        [ 46%]
-tests/test_genai_suite.py::test_autonomous_react_agent_flow PASSED       [ 50%]
-tests/test_genai_suite.py::test_knowledge_api_endpoints PASSED           [ 53%]
-tests/test_rbac_security.py::test_analytics_rbac PASSED                  [ 57%]
-tests/test_rbac_security.py::test_settings_admin_only PASSED             [ 60%]
-tests/test_rbac_security.py::test_employee_directory_rbac PASSED         [ 64%]
-tests/test_rbac_security.py::test_knowledge_security_rbac PASSED         [ 67%]
-tests/test_rbac_security.py::test_google_auth_forgery_protection PASSED  [ 71%]
-tests/test_realtime.py::test_notify_broadcasts_to_connected_clients PASSED [ 75%]
-tests/test_realtime.py::test_notify_is_noop_before_startup PASSED        [ 78%]
-tests/test_realtime.py::test_sla_sweeps_callable_outside_request PASSED  [ 82%]
-tests/test_tickets_api.py::test_create_ticket_authenticated PASSED       [ 85%]
-tests/test_tickets_api.py::test_create_ticket_unauthenticated PASSED     [ 89%]
-tests/test_tickets_api.py::test_customer_ticket_list_scoping PASSED      [ 92%]
-tests/test_tickets_api.py::test_internal_notes_access_control PASSED     [ 96%]
-tests/test_tickets_api.py::test_suggestions_access_control PASSED        [100%]
-
-======================= 28 passed in 1.58s =======================
-```
-
----
-
-## 🔒 Production Security & Hardening Checklist
-
-- [x] **Zero-Leakage PII Guardrails**: Strips Credit Cards (Luhn validated), API keys, and credentials before LLM dispatch.
-- [x] **Strict RBAC Guards**: Endpoints enforce role tiering (`Customer`, `Employee`, `Admin`) with 401/403 validation.
-- [x] **Rate Limiting**: SlowAPI protection on `/api/auth/login` (10 req/min) and global routes (100 req/min).
-- [x] **Stateless JWT Tokens**: HS256-signed tokens with strict expiry and audience validation.
-- [x] **PostgreSQL Ready**: One-click schema migration with Alembic and connection pooling via `pool_pre_ping`.
-- [x] **Authenticated WebSocket**: Ticket broadcast bus requires signed JWT tokens.
-2. 🔐 **Enterprise Single Sign-On (SSO)**:
-   - SAML 2.0 / OpenID Connect integration for Okta, Azure AD, and Google Workspace.
-3. ⚡ **Background Workers & Scheduling**:
-   - Celery workers for SLA timers, email dispatch, and scheduled escalation sweeps at high concurrency.
-4. 📧 **Inbound Email Ingestion Gateway**:
-   - Parse incoming support emails (`support@company.com`) via IMAP/SendGrid Webhooks directly into AI tickets.
 
 ---
 
