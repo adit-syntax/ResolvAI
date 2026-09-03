@@ -344,7 +344,9 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
                   {agentTrace.trace?.map((step, idx) => (
                     <div key={idx} className="bg-neutral-950 p-3.5 rounded-lg border border-neutral-800 space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-purple-300 font-mono">Step {step.step}: Thought &amp; Tool</span>
+                        <span className="font-bold text-purple-300 font-mono">
+                          Step {step.step}: {step.title || (step.step === 1 ? 'Knowledge Base & SOP Retrieval' : step.step === 2 ? 'Diagnostic & Account Verification' : 'Resolution Plan Synthesis & Grounding')}
+                        </span>
                         <span className="text-[10px] font-mono text-neutral-400 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
                           Action: {step.action}
                         </span>

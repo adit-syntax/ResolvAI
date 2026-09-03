@@ -72,8 +72,24 @@ def _seed_demo_users(db):
         print("[Startup] Production environment detected: Default demo accounts skipped for security.")
         return
 
-    from models import User
+    from models import User, Employee
     from auth_utils import get_password_hash
+
+    # Ensure Support Agent exists in Employee directory
+    emp_support = db.query(Employee).filter(Employee.email == "employee@company.com").first()
+    if not emp_support:
+        emp_support = Employee(
+            name="Support Agent",
+            email="employee@company.com",
+            department="IT",
+            role="Support Specialist",
+            skill_tags="access,general,support,vpn",
+            avg_resolution_time=2.0,
+            current_ticket_load=0,
+            availability="Available",
+        )
+        db.add(emp_support)
+        db.flush()
 
     demo_accounts = [
         {"name": "Admin User",    "email": "admin@gmail.com",       "password": "admin123",    "role": "admin"},
@@ -86,6 +102,8 @@ def _seed_demo_users(db):
     ]
 
     for acct in demo_accounts:
+        emp_match = db.query(Employee).filter(Employee.email.ilike(acct["email"])).first()
+        emp_id = emp_match.id if emp_match else None
         existing = db.query(User).filter(User.email == acct["email"]).first()
         if not existing:
             user = User(
@@ -93,8 +111,11 @@ def _seed_demo_users(db):
                 email=acct["email"],
                 hashed_password=get_password_hash(acct["password"]),
                 role=acct["role"],
+                employee_id=emp_id,
             )
             db.add(user)
+        elif not existing.employee_id and emp_id:
+            existing.employee_id = emp_id
 
     try:
         db.commit()

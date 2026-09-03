@@ -17,7 +17,6 @@ const DEMO_SCENARIOS = [
     sentiment: 'Polite',
     userMsg: 'I cannot log in to my account after changing my password yesterday. Can someone help reset it?',
     aiSummary: 'User requires password reset instructions following recent password change.',
-    confidence: '98.5%',
     action: 'Auto-Resolved',
     response: 'To reset your password, visit the login page and click "Forgot Password". Enter your email and follow the secure link sent to your inbox.',
   },
@@ -29,7 +28,6 @@ const DEMO_SCENARIOS = [
     sentiment: 'Frustrated',
     userMsg: 'I was charged twice for my monthly subscription! Order #4920 shows duplicate $49 charges.',
     aiSummary: 'Duplicate transaction detected on subscription order #4920.',
-    confidence: '95.2%',
     action: 'Auto-Resolved',
     response: 'We detected a duplicate charge of $49.00 for order #4920. A full refund of $49.00 has been initiated and will reflect in 3-5 business days.',
   },
@@ -41,7 +39,6 @@ const DEMO_SCENARIOS = [
     sentiment: 'Frustrated',
     userMsg: 'URGENT! Production server app-02 is returning HTTP 500 errors across all user endpoints.',
     aiSummary: 'Critical production outage on server app-02 returning 500 Internal Server Errors.',
-    confidence: '99.1%',
     action: 'Assigned to DevOps (Alex River)',
     response: 'High severity issue detected. Automatically assigned to Alex River (DevOps Lead - 1 active ticket). Escalation notification sent.',
   },
@@ -53,7 +50,6 @@ const DEMO_SCENARIOS = [
     sentiment: 'Neutral',
     userMsg: 'How many days of carry-over leave am I allowed for the 2026 calendar year?',
     aiSummary: 'Inquiry regarding 2026 company leave carry-over policy.',
-    confidence: '96.0%',
     action: 'Auto-Resolved',
     response: 'According to HR policy Section 4.2, employees are entitled to carry over up to 5 unused annual leave days into 2026.',
   },
@@ -65,7 +61,6 @@ const DEMO_SCENARIOS = [
     sentiment: 'Neutral',
     userMsg: 'Main analytics reporting query is timing out after 30s during peak hours.',
     aiSummary: 'Database timeout on analytics reporting query during high concurrency.',
-    confidence: '97.4%',
     action: 'Assigned to Database Team (Sarah Chen)',
     response: 'Assigned to Sarah Chen (Senior DBA). Recommended action: Add index on created_at column.',
   },
@@ -176,7 +171,7 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
               </span>
               {step >= 2 && (
                 <span className="text-[10px] text-[#22c55e] font-mono font-semibold bg-[#22c55e]/10 px-2 py-0.5 rounded-full border border-[#22c55e]/20">
-                  Confidence: {scenario.confidence}
+                  Verified
                 </span>
               )}
             </div>
@@ -230,7 +225,7 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
           {step >= 4 && (
             <div className="p-4 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/30 flex items-center justify-between text-xs text-[#22c55e] font-semibold animate-fade-in">
               <span className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" /> Triage completed successfully in 1.2 seconds!
+                <CheckCircle2 className="w-4 h-4" /> Ticket processed successfully
               </span>
               <button
                 onClick={runSimulation}

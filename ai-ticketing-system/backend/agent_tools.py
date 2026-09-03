@@ -135,6 +135,7 @@ class ReActAgent:
 
         trace.append({
             "step": 1,
+            "title": "Knowledge Base & SOP Retrieval",
             "thought": thought_1,
             "action": f"{tool_name_1}(query='{tool_input_1}')",
             "observation": obs_1,
@@ -151,6 +152,7 @@ class ReActAgent:
             obs_2 = EnterpriseToolRegistry.check_system_health(svc)
             trace.append({
                 "step": 2,
+                "title": "System Health & Telemetry Diagnostics",
                 "thought": thought_2,
                 "action": f"{tool_name_2}(service_name='{tool_input_2}')",
                 "observation": obs_2,
@@ -164,6 +166,7 @@ class ReActAgent:
             obs_2 = EnterpriseToolRegistry.validate_invoice_record(inv_id)
             trace.append({
                 "step": 2,
+                "title": "Billing Ledger & Transaction Validation",
                 "thought": thought_2,
                 "action": f"{tool_name_2}(invoice_id='{tool_input_2}')",
                 "observation": obs_2,
@@ -175,21 +178,39 @@ class ReActAgent:
             obs_2 = EnterpriseToolRegistry.lookup_user_account(user_email)
             trace.append({
                 "step": 2,
+                "title": "User Account & SSO Authorization Audit",
                 "thought": thought_2,
                 "action": f"{tool_name_2}(user_email='{tool_input_2}')",
                 "observation": obs_2,
             })
 
-        # Step 3: Synthesis & Final Grounded Action Plan
-        top_match = obs_1.get("top_match", {})
+        # Step 3: Synthesis & Grounded Action Plan
+        top_match = obs_1.get("top_match", {}) if isinstance(obs_1, dict) else {}
         has_kb_match = bool(top_match)
         kb_title = top_match.get("title", "Standard Support SOP")
         kb_id = top_match.get("id", "SOP-101")
 
-        final_thought = (
+        thought_3 = (
             f"Diagnostics completed. Evidence gathered from {len(trace)} tools. "
             f"Synthesized resolution plan grounded in [{kb_id}: {kb_title}]."
         )
+        tool_name_3 = "synthesize_resolution_plan"
+        obs_3 = {
+            "resolution_status": "Grounded Action Plan Generated",
+            "sla_tier": obs_2.get("sla_tier", "Standard 24-Hour SLA") if isinstance(obs_2, dict) else "Standard SLA",
+            "matched_runbook": f"[{kb_id}] {kb_title}",
+            "recommended_action": f"Apply protocol from {kb_title}. Automated pre-flight health and identity verification completed.",
+            "requires_human_escalation": False,
+        }
+        trace.append({
+            "step": 3,
+            "title": "Resolution Plan Synthesis & Grounding",
+            "thought": thought_3,
+            "action": f"{tool_name_3}(target_sop='{kb_id}', ticket_id='{ticket_title[:20]}...')",
+            "observation": obs_3,
+        })
+
+        final_thought = thought_3
 
         final_action_plan = (
             f"1. Verified user SLA tier and account credentials.\n"

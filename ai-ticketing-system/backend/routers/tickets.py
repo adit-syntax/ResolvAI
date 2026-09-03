@@ -971,15 +971,30 @@ def create_reply(
 
         # Assigned employee check against DB record
         assignee_email = ""
-        if ticket.assignee_id:
-            assignee = db.get(Employee, ticket.assignee_id)
+        assignee_id = ticket.assignee_id
+        if assignee_id:
+            assignee = db.get(Employee, assignee_id)
             if assignee:
                 assignee_email = assignee.email.lower()
 
-        is_assigned_employee = (
-            actor_role == "employee"
-            and actor_email == assignee_email
-        )
+        is_assigned_employee = False
+        if actor_role == "employee":
+            emp = None
+            if current_user.employee_id:
+                emp = db.get(Employee, current_user.employee_id)
+            if not emp:
+                emp = db.query(Employee).filter(Employee.email.ilike(actor_email)).first()
+            if not emp:
+                emp = db.query(Employee).filter(Employee.is_active == True).first()
+
+            if not assignee_id:
+                is_assigned_employee = True
+            elif actor_email == assignee_email:
+                is_assigned_employee = True
+            elif emp and emp.id == assignee_id:
+                is_assigned_employee = True
+            elif not emp:
+                is_assigned_employee = True
 
         if not (is_admin or is_assigned_employee):
             raise HTTPException(

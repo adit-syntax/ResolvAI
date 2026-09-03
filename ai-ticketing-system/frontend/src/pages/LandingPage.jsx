@@ -1,17 +1,19 @@
 /**
- * LandingPage.jsx — Public Landing Page for ResolvAI
- * Features: Interactive Carousel, Micro-animations, Glassmorphism Overlays, Registration & Sign-In Modal
+ * LandingPage.jsx — Clean, Modern & Realistic SaaS Landing Page for ResolvAI
+ * Focuses on real capabilities, clear product workflows, and zero artificial metrics.
  */
 
 import React, { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
-import LandingCarousel from '../components/LandingCarousel.jsx';
 import DemoOverlayModal from '../components/DemoOverlayModal.jsx';
+import LandingCarousel from '../components/LandingCarousel.jsx';
+import DocumentationModal from '../components/DocumentationModal.jsx';
 import {
-  Sparkles, ArrowRight, ShieldCheck, User, Zap, Bot, AlertTriangle,
+  ArrowRight, ShieldCheck, User, Bot, AlertTriangle,
   MessageSquare, BarChart3, CheckCircle2, ChevronDown, ChevronUp,
-  Layers, Lock, Mail, Star, Play, Globe, Cpu, Headphones, X, UserPlus, LogIn, Info
+  Layers, Headphones, X, UserPlus, LogIn, Info,
+  Search, Users, Clock, FileText, Check, Play, Sparkles, BookOpen
 } from 'lucide-react';
 import { authApi, setAuthToken } from '../api.js';
 
@@ -26,20 +28,74 @@ function GoogleIcon({ className = 'w-4 h-4' }) {
   );
 }
 
-
 const DEMO_CREDENTIALS = {
   user:     { email: 'user@gmail.com',        password: 'user123'     },
   employee: { email: 'employee@company.com',  password: 'employee123' },
   admin:    { email: 'admin@gmail.com',       password: 'admin123'    },
 };
 
+const REAL_TICKET_EXAMPLES = [
+  {
+    id: 'vpn',
+    badge: 'Access',
+    title: 'VPN Connection Setup',
+    description: 'Cannot connect to company VPN from remote office after updating macOS.',
+    category: 'Access',
+    priority: 'Normal',
+    matchedSop: 'SOP-101: Remote Access & VPN Configuration',
+    resolutionType: 'auto_resolved',
+    actionText: 'Instant Auto-Response Sent',
+    actionDetail: 'Provided verified VPN profile configuration steps and macOS client download link.',
+  },
+  {
+    id: 'billing',
+    badge: 'Billing',
+    title: 'Duplicate Monthly Charge',
+    description: 'My account was billed twice for the monthly subscription on the same invoice.',
+    category: 'Billing',
+    priority: 'Medium',
+    matchedSop: 'SOP-204: Billing & Refund Verification',
+    resolutionType: 'auto_resolved',
+    actionText: 'Instant Auto-Response Sent',
+    actionDetail: 'Identified duplicate invoice entry and initiated verification for the refund process.',
+  },
+  {
+    id: 'outage',
+    badge: 'Technical',
+    title: 'API Gateway 502 Errors',
+    description: 'Multiple endpoints returning 502 Bad Gateway under normal traffic volume.',
+    category: 'Server',
+    priority: 'Critical',
+    matchedSop: 'SOP-502: Infrastructure Incident Response',
+    resolutionType: 'assigned',
+    actionText: 'Assigned to DevOps Team',
+    actionDetail: 'High-severity incident routed to available engineer with lowest active workload.',
+  },
+  {
+    id: 'hr',
+    badge: 'HR / Policy',
+    title: 'Annual Leave Carry-Over Policy',
+    description: 'How many days of unused vacation leave can be carried over into this year?',
+    category: 'HR',
+    priority: 'Low',
+    matchedSop: 'SOP-301: Employee Benefits & Leave Policy',
+    resolutionType: 'auto_resolved',
+    actionText: 'Instant Auto-Response Sent',
+    actionDetail: 'Retrieved verified policy excerpt regarding annual leave carry-over limits.',
+  },
+];
 
 export default function LandingPage({ onLogin }) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [authTab, setAuthTab] = useState('login');
   const [showDemoOverlay, setShowDemoOverlay] = useState(false);
+  const [showDocsModal, setShowDocsModal] = useState(false);
   const [initialOverlayScenario, setInitialOverlayScenario] = useState('ai-triage');
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+  // Interactive Ticket Example Selector
+  const [selectedExampleIndex, setSelectedExampleIndex] = useState(0);
+  const selectedExample = REAL_TICKET_EXAMPLES[selectedExampleIndex];
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -47,7 +103,7 @@ export default function LandingPage({ onLogin }) {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Register form state (end-user only)
+  // Register form state
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
@@ -57,15 +113,18 @@ export default function LandingPage({ onLogin }) {
   // Google OAuth state
   const [googleError, setGoogleError] = useState('');
 
+  // FAQ Accordion state
+  const [openFaqIndex, setOpenFaqIndex] = useState(0);
+
   const googleLogin = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       try {
-        const res  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: `Bearer ${codeResponse.access_token}` },
         });
         const info = await res.json();
         const googleEmail = (info.email || '').toLowerCase();
-        const googleName  = info.name   || googleEmail.split('@')[0];
+        const googleName  = info.name || googleEmail.split('@')[0];
         const data = await authApi.googleAuth({
           email: googleEmail,
           name: googleName,
@@ -82,10 +141,6 @@ export default function LandingPage({ onLogin }) {
     flow: 'implicit',
   });
 
-  // FAQ Accordion state
-  const [openFaqIndex, setOpenFaqIndex] = useState(null);
-
-
   const handleQuickLogin = async (type) => {
     const cred = DEMO_CREDENTIALS[type];
     try {
@@ -94,7 +149,7 @@ export default function LandingPage({ onLogin }) {
       onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
       setShowLoginModal(false);
     } catch (err) {
-      setLoginError(err.message || 'Demo login failed — is the backend running?');
+      setLoginError(err.message || 'Demo login failed. Make sure the backend server is running.');
     }
   };
 
@@ -151,268 +206,438 @@ export default function LandingPage({ onLogin }) {
 
   const faqItems = [
     {
-      q: 'How does ResolvAI achieve instant auto-resolution?',
-      a: 'When an incoming ticket is submitted, our LLM engine extracts intent, categorizes the request, and searches verified solutions. For routine queries (like password resets, refunds, or status checks), it responds immediately with verified resolution steps.',
+      q: 'How does the automated response system work?',
+      a: 'When a user submits a ticket, the system parses the description, identifies the category and intent, and queries the knowledge base for verified documentation. If an exact answer is found, an instant response is suggested to the user.',
     },
     {
-      q: 'What happens if the AI cannot solve an issue?',
-      a: 'Unresolved issues are automatically assigned to the best employee in the target department based on real-time workload, skill-tags, and availability. A live chat thread opens for direct human interaction.',
+      q: 'How are tickets routed to employees when they cannot be auto-resolved?',
+      a: 'Tickets requiring human intervention are assigned to team members based on their relevant skills and their current active workload, preventing any single team member from becoming overwhelmed.',
     },
     {
-      q: 'Can users and agents interact in real-time?',
-      a: 'Yes! ResolvAI incorporates a WebSocket chat thread supporting real-time messaging, file/image attachments, resolution confirmation checks, and timeline tracking.',
+      q: 'Can support staff and users communicate in real time?',
+      a: 'Yes. Each ticket has an integrated WebSocket-powered conversation thread where users and assigned staff can exchange messages, attachments, and status updates.',
     },
     {
-      q: 'Does it require complex setup or API keys?',
-      a: 'ResolvAI runs right out of the box with a pre-configured database and mock AI fallback, as well as native support for Groq, OpenAI, or Anthropic LLM backends.',
+      q: 'What roles exist in ResolvAI?',
+      a: 'ResolvAI supports three distinct roles: End Users (who file and view tickets), Support Employees (who manage and resolve assigned tickets), and Administrators (who oversee team workloads, user directory, and analytics).',
     },
     {
-      q: 'Is ResolvAI secure enough for enterprise production?',
-      a: 'Yes. ResolvAI incorporates bank-grade encrypted sessions, granular role permissions for users, agents, and administrators, automated abuse protection, and scalable 99.9% SLA cloud architecture.',
+      q: 'Can I test all features without setting up an account?',
+      a: 'Yes. Use the Quick Demo buttons in the header or login modal to log in immediately as a User, Support Employee, or Administrator.',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-[#22c55e] selection:text-black font-sans relative overflow-x-hidden">
-      
-      {/* Dynamic Background Glow Spheres */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-[#22c55e]/10 rounded-full blur-[140px] animate-pulse" />
-        <div className="absolute top-[30%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[10%] left-[-10%] w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[130px]" />
-      </div>
+    <div className="min-h-screen bg-[#09090b] text-neutral-100 font-sans selection:bg-[#22c55e] selection:text-black">
 
-      {/* ─── 1. STICKY GLASS HEADER ────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-[#222222] transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      {/* ─── 1. CLEAN HEADER ────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-40 bg-[#09090b]/90 backdrop-blur-md border-b border-neutral-800">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           
-          {/* Logo Branding (Without Version Badge) */}
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <ResolvAiLogo className="w-9 h-9 drop-shadow-[0_0_12px_rgba(34,197,94,0.4)] group-hover:scale-105 transition-transform" />
-            <div>
-              <span className="text-xl font-black tracking-tight text-white">Resolv<span className="text-[#22c55e]">AI</span></span>
-            </div>
+          {/* Logo Branding — Clean, no glow halos or extra badges */}
+          <div
+            className="flex items-center gap-2.5 cursor-pointer"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <ResolvAiLogo className="w-7 h-7" />
+            <span className="text-base font-bold text-white tracking-tight">
+              Resolv<span className="text-[#22c55e]">AI</span>
+            </span>
           </div>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
-            <a href="#features" className="hover:text-white transition-colors hover:scale-105">Features</a>
-            <a href="#carousel" className="hover:text-white transition-colors hover:scale-105">AI Capabilities</a>
-            <a href="#workflow" className="hover:text-white transition-colors hover:scale-105">Workflow</a>
-            <a href="#faq" className="hover:text-white transition-colors hover:scale-105">FAQ</a>
+          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-400">
+            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+            <a href="#features" className="hover:text-white transition-colors">Features</a>
+            <a href="#roles" className="hover:text-white transition-colors">Portals</a>
+            <button
+              onClick={() => setShowDocsModal(true)}
+              className="hover:text-white transition-colors flex items-center gap-1"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#22c55e]" /> Docs
+            </button>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </nav>
 
           {/* Header Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => handleQuickLogin('user')}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-[#171717] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-semibold text-neutral-200 transition-all active:scale-95 hover:border-[#22c55e]/50"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors"
             >
-              <User className="w-3.5 h-3.5 text-[#22c55e]" /> Demo User
+              <User className="w-3.5 h-3.5 text-[#22c55e]" /> User Demo
             </button>
 
             <button
               onClick={() => handleQuickLogin('admin')}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-[#171717] hover:bg-[#222222] border border-[#2e2e2e] text-xs font-semibold text-neutral-200 transition-all active:scale-95 hover:border-blue-500/50"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" /> Demo Admin
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" /> Admin Demo
             </button>
 
             <button
               id="header-sign-in-btn"
               onClick={() => { setAuthTab('login'); setShowLoginModal(true); }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold text-xs transition-all shadow-lg shadow-[#22c55e]/25 active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors cursor-pointer"
             >
-              Sign In <ArrowRight className="w-4 h-4" />
+              Sign In <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
         </div>
       </header>
 
-      {/* ─── 2. HERO SECTION ───────────────────────────────────────────── */}
-      <section className="relative z-10 pt-16 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
+      {/* ─── 2. HERO SECTION ────────────────────────────────────────────── */}
+      <section className="pt-16 pb-16 px-4 sm:px-6 max-w-5xl mx-auto text-center">
         
-        {/* Animated Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#161616] border border-[#22c55e]/30 text-xs font-medium text-[#22c55e] mb-8 shadow-xl hover:border-[#22c55e]/60 transition-all cursor-pointer" onClick={() => openOverlayWithScenario('ai-triage')}>
-          <Sparkles className="w-4 h-4 animate-spin text-[#22c55e]" />
-          <span>Autonomous AI Support &amp; Smart Triage Engine</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-ping" />
+        {/* Simple Honest Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-400 mb-6">
+          <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+          <span>Intelligent Helpdesk &amp; Workload Management</span>
         </div>
 
         {/* Hero Title */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] mb-6">
-          Zero Backlog Helpdesk Powered by <br className="hidden sm:inline" />
-          <span className="bg-gradient-to-r from-[#22c55e] via-emerald-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(34,197,94,0.3)]">
-            Autonomous AI Triage
-          </span>
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-5">
+          Support Ticketing, <br className="hidden sm:inline" />
+          Organized and Automated.
         </h1>
 
         {/* Subtitle */}
-        <p className="max-w-3xl mx-auto text-base sm:text-lg text-neutral-400 leading-relaxed mb-10">
-          ResolvAI reads incoming user support tickets, extracts intent, auto-resolves routine queries instantly, and intelligently routes complex issues to the exact right employee based on real-time workload and skills.
+        <p className="max-w-2xl mx-auto text-sm sm:text-base text-neutral-400 leading-relaxed mb-8">
+          ResolvAI classifies incoming tickets, suggests instant answers using your team's verified documentation, and assigns unresolved cases to the right team member based on active workload.
         </p>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
+        {/* CTAs */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
           <button
             onClick={() => handleQuickLogin('user')}
-            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold text-sm transition-all shadow-xl shadow-[#22c55e]/20 active:scale-98 group"
+            className="px-5 py-2.5 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors inline-flex items-center gap-2"
           >
-            <Headphones className="w-4 h-4" />
-            Launch Support Portal
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <Headphones className="w-4 h-4" /> Open Support Portal
+          </button>
+
+          <button
+            onClick={() => handleQuickLogin('admin')}
+            className="px-5 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 font-semibold text-xs transition-colors inline-flex items-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4 text-blue-400" /> Admin Dashboard
           </button>
 
           <button
             onClick={() => openOverlayWithScenario('ai-triage')}
-            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-[#2e2e2e] hover:border-[#22c55e]/40 text-white font-semibold text-sm transition-all active:scale-98"
+            className="px-5 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 font-semibold text-xs transition-colors inline-flex items-center gap-2"
           >
-            <Play className="w-4 h-4 text-[#22c55e]" />
-            Watch Live Interactive Demo
+            <Play className="w-4 h-4 text-[#22c55e]" /> Watch Simulated Flow
           </button>
         </div>
 
-        {/* Feature Highlights Bar */}
-        <div className="mt-8 pt-6 border-t border-[#1f1f1f] max-w-2xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-neutral-500">
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Instant Auto-Resolution</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Smart Workload Routing</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> Live Agent Chat</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" /> 99.9% Enterprise SLA</span>
+        {/* ─── REAL TICKET PROCESSING DEMO WIDGET ─────────────────────── */}
+        <div className="text-left bg-neutral-900/60 border border-neutral-800 rounded-2xl p-5 sm:p-6 shadow-lg max-w-4xl mx-auto">
+          <div className="pb-4 mb-4 border-b border-neutral-800">
+            <span className="text-xs font-semibold text-white uppercase tracking-wider block">
+              How a Ticket is Handled
+            </span>
+            <span className="text-xs text-neutral-400">
+              Select an example issue to see how ResolvAI categorizes and resolves it.
+            </span>
+          </div>
+
+          {/* Example Selector Chips */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {REAL_TICKET_EXAMPLES.map((item, idx) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedExampleIndex(idx)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                  idx === selectedExampleIndex
+                    ? 'bg-neutral-800 text-white border-neutral-600'
+                    : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-700'
+                }`}
+              >
+                {item.title}
+              </button>
+            ))}
+          </div>
+
+          {/* Output Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Input Ticket Box */}
+            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-2.5">
+              <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
+                Ticket Information
+              </span>
+              <p className="text-xs font-semibold text-white">{selectedExample.title}</p>
+              <p className="text-xs text-neutral-400 leading-relaxed font-mono">
+                "{selectedExample.description}"
+              </p>
+              <div className="flex gap-2 pt-2">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-300 border border-neutral-800">
+                  Category: {selectedExample.category}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-300 border border-neutral-800">
+                  Priority: {selectedExample.priority}
+                </span>
+              </div>
+            </div>
+
+            {/* Processing Result */}
+            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 space-y-2.5 flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
+                  System Resolution
+                </span>
+                <div className="text-xs font-semibold text-white mt-1 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />
+                  {selectedExample.actionText}
+                </div>
+                <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+                  {selectedExample.actionDetail}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-neutral-800 text-[11px] text-neutral-500">
+                Documentation: <span className="text-neutral-300">{selectedExample.matchedSop}</span>
+              </div>
+            </div>
+
+          </div>
         </div>
 
       </section>
 
-      {/* ─── 3. FEATURE CAROUSEL SECTION ───────────────────────────────── */}
-      <section id="carousel" className="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-4">
-          <p className="text-xs font-mono font-semibold uppercase tracking-widest text-[#22c55e]">INTERACTIVE CAPABILITIES</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mt-1">Explore ResolvAI Core Modules</h2>
+      {/* ─── 3. HOW IT WORKS ────────────────────────────────────────────── */}
+      <section id="how-it-works" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            How ResolvAI Works
+          </h2>
+          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
+            A structured, three-step flow from ticket submission to verified resolution.
+          </p>
         </div>
 
-        {/* Carousel Component */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3">
+            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
+              1
+            </div>
+            <h3 className="text-sm font-semibold text-white">Ticket Ingestion &amp; Triage</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Users submit issues via the support portal. The system reads the description and automatically determines the category and urgency.
+            </p>
+          </div>
+
+          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3">
+            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
+              2
+            </div>
+            <h3 className="text-sm font-semibold text-white">Knowledge Base Query</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              ResolvAI searches your organization's documentation. If a matching SOP is found, it generates a verified answer immediately.
+            </p>
+          </div>
+
+          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3">
+            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
+              3
+            </div>
+            <h3 className="text-sm font-semibold text-white">Smart Routing &amp; Live Chat</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Unresolved issues are assigned to the employee with matching skills and lowest current workload for real-time chat resolution.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ─── 4. CORE FEATURES ───────────────────────────────────────────── */}
+      <section id="features" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Key Platform Features
+          </h2>
+          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
+            Built to handle everyday support tasks reliably without unnecessary complexity.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+          
+          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
+            <Bot className="w-5 h-5 text-[#22c55e] mb-2" />
+            <h3 className="text-sm font-semibold text-white">Automated Triage</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Automatically assigns categories (Billing, Access, Server, HR) and priority levels based on ticket context.
+            </p>
+          </div>
+
+          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
+            <Search className="w-5 h-5 text-blue-400 mb-2" />
+            <h3 className="text-sm font-semibold text-white">Knowledge Base Matching</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Matches user queries against verified standard operating procedures (SOPs) to suggest proven solutions.
+            </p>
+          </div>
+
+          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
+            <Users className="w-5 h-5 text-purple-400 mb-2" />
+            <h3 className="text-sm font-semibold text-white">Workload-Based Routing</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Routes tickets to team members by checking active ticket counts, department, and skill-tags to prevent bottlenecks.
+            </p>
+          </div>
+
+          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
+            <MessageSquare className="w-5 h-5 text-amber-400 mb-2" />
+            <h3 className="text-sm font-semibold text-white">Live Support Chat</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Integrated real-time WebSocket messaging for ongoing troubleshooting and resolution verification between user and agent.
+            </p>
+          </div>
+
+          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
+            <Layers className="w-5 h-5 text-emerald-400 mb-2" />
+            <h3 className="text-sm font-semibold text-white">Duplicate Detection</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Detects similar tickets submitted by users to alert staff and prevent redundant troubleshooting work.
+            </p>
+          </div>
+
+          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
+            <BarChart3 className="w-5 h-5 text-indigo-400 mb-2" />
+            <h3 className="text-sm font-semibold text-white">Analytics Dashboard</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              Detailed tracking for open vs. closed tickets, team resolution times, department workload, and SLA compliance.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ─── 5. INTERACTIVE CAPABILITIES CAROUSEL ──────────────────────── */}
+      <section className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
+        <div className="text-center max-w-2xl mx-auto mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Explore Core System Capabilities
+          </h2>
+          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
+            Step through the key modules powering automated triage, knowledge retrieval, and live helpdesk routing.
+          </p>
+        </div>
+
         <LandingCarousel onOpenOverlay={openOverlayWithScenario} />
       </section>
 
-      {/* ─── 4. METRICS / STATS GRID WITH HOVER EFFECTS ─────────────────── */}
-      <section id="features" className="relative z-10 py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* ─── 5. ROLE PORTALS ────────────────────────────────────────────── */}
+      <section id="roles" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Dedicated Workspaces for Every Role
+          </h2>
+          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
+            Tailored views for customers, support staff, and team administrators.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          <div className="bg-[#111111] border border-[#222222] hover:border-[#22c55e]/50 hover:bg-[#22c55e]/5 p-6 rounded-2xl transition-all duration-300 group hover:-translate-y-1 shadow-xl">
-            <div className="w-10 h-10 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Zap className="w-5 h-5 text-[#22c55e]" />
+          {/* User Portal */}
+          <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono font-medium text-[#22c55e] uppercase">Customer Role</span>
+                <User className="w-4 h-4 text-[#22c55e]" />
+              </div>
+              <h3 className="text-base font-semibold text-white">Support Portal</h3>
+              <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                Simple interface for users to submit requests, track ticket status, and receive answers or communicate with staff.
+              </p>
             </div>
-            <p className="text-3xl font-black text-white font-mono mb-1">85%</p>
-            <p className="text-sm font-semibold text-white mb-1">Auto-Resolution Rate</p>
-            <p className="text-xs text-neutral-500">Deflects routine tickets without human agent intervention.</p>
+            <button
+              onClick={() => handleQuickLogin('user')}
+              className="w-full py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-white transition-colors"
+            >
+              Open User View
+            </button>
           </div>
 
-          <div className="bg-[#111111] border border-[#222222] hover:border-blue-500/50 hover:bg-blue-500/5 p-6 rounded-2xl transition-all duration-300 group hover:-translate-y-1 shadow-xl">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Bot className="w-5 h-5 text-blue-400" />
+          {/* Staff Workspace */}
+          <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono font-medium text-purple-400 uppercase">Support Role</span>
+                <Headphones className="w-4 h-4 text-purple-400" />
+              </div>
+              <h3 className="text-base font-semibold text-white">Staff Workspace</h3>
+              <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                Assigned ticket queue with AI-assisted response drafting, internal collaboration notes, and status management.
+              </p>
             </div>
-            <p className="text-3xl font-black text-white font-mono mb-1">&lt; 1.5s</p>
-            <p className="text-sm font-semibold text-white mb-1">AI Triage Speed</p>
-            <p className="text-xs text-neutral-500">Extracts intent, category, and severity in under 2 seconds.</p>
+            <button
+              onClick={() => handleQuickLogin('employee')}
+              className="w-full py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-white transition-colors"
+            >
+              Open Staff View
+            </button>
           </div>
 
-          <div className="bg-[#111111] border border-[#222222] hover:border-purple-500/50 hover:bg-purple-500/5 p-6 rounded-2xl transition-all duration-300 group hover:-translate-y-1 shadow-xl">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Layers className="w-5 h-5 text-purple-400" />
+          {/* Admin Console */}
+          <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono font-medium text-blue-400 uppercase">Admin Role</span>
+                <ShieldCheck className="w-4 h-4 text-blue-400" />
+              </div>
+              <h3 className="text-base font-semibold text-white">Admin Console</h3>
+              <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                Complete team directory, workload overview, system settings, knowledge base curation, and analytics charts.
+              </p>
             </div>
-            <p className="text-3xl font-black text-white font-mono mb-1">10x</p>
-            <p className="text-sm font-semibold text-white mb-1">Resolution Velocity</p>
-            <p className="text-xs text-neutral-500">Eliminates support backlogs with intelligent skill routing.</p>
-          </div>
-
-          <div className="bg-[#111111] border border-[#222222] hover:border-amber-500/50 hover:bg-amber-500/5 p-6 rounded-2xl transition-all duration-300 group hover:-translate-y-1 shadow-xl">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Star className="w-5 h-5 text-amber-400" />
-            </div>
-            <p className="text-3xl font-black text-white font-mono mb-1">99.4%</p>
-            <p className="text-sm font-semibold text-white mb-1">CSAT Satisfaction</p>
-            <p className="text-xs text-neutral-500">Built-in one-click feedback loops for continuous learning.</p>
+            <button
+              onClick={() => handleQuickLogin('admin')}
+              className="w-full py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-white transition-colors"
+            >
+              Open Admin View
+            </button>
           </div>
 
         </div>
       </section>
 
-      {/* ─── 5. WORKFLOW STEP SECTION ───────────────────────────────────── */}
-      <section id="workflow" className="relative z-10 py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <p className="text-xs font-mono font-semibold uppercase tracking-widest text-[#22c55e]">HOW IT WORKS</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mt-1">End-to-End Autonomous Triage Lifecycle</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          
-          <div className="bg-[#111111] border border-[#222222] p-6 rounded-2xl relative hover:border-[#22c55e]/40 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/30 text-[#22c55e] font-mono font-bold text-sm flex items-center justify-center mb-4">
-              01
-            </div>
-            <h3 className="text-base font-bold text-white mb-2">User Ticket Submission</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              User submits a support request via Support Portal with description and optional screenshot attachments.
-            </p>
-          </div>
-
-          <div className="bg-[#111111] border border-[#222222] p-6 rounded-2xl relative hover:border-[#22c55e]/40 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/30 text-[#22c55e] font-mono font-bold text-sm flex items-center justify-center mb-4">
-              02
-            </div>
-            <h3 className="text-base font-bold text-white mb-2">LLM Context Analysis</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              AI model extracts intent, assigns category (Billing, Bug, Access, HR), severity level, and user sentiment.
-            </p>
-          </div>
-
-          <div className="bg-[#111111] border border-[#222222] p-6 rounded-2xl relative hover:border-[#22c55e]/40 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/30 text-[#22c55e] font-mono font-bold text-sm flex items-center justify-center mb-4">
-              03
-            </div>
-            <h3 className="text-base font-bold text-white mb-2">Auto-Resolve or Skill Route</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              If solution exists, AI auto-resolves. Otherwise, routes to available employee with matching skills &amp; lowest load.
-            </p>
-          </div>
-
-          <div className="bg-[#111111] border border-[#222222] p-6 rounded-2xl relative hover:border-[#22c55e]/40 transition-all">
-            <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/30 text-[#22c55e] font-mono font-bold text-sm flex items-center justify-center mb-4">
-              04
-            </div>
-            <h3 className="text-base font-bold text-white mb-2">Live Chat &amp; Verification</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              WebSocket chat thread facilitates user-agent communication and logs satisfaction feedback to analytics.
-            </p>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ─── 6. FAQ ACCORDION SECTION ───────────────────────────────────── */}
-      <section id="faq" className="relative z-10 py-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+      {/* ─── 6. FAQ ─────────────────────────────────────────────────────── */}
+      <section id="faq" className="py-16 px-4 sm:px-6 max-w-3xl mx-auto border-t border-neutral-800">
         <div className="text-center mb-10">
-          <p className="text-xs font-mono font-semibold uppercase tracking-widest text-[#22c55e]">FREQUENTLY ASKED QUESTIONS</p>
-          <h2 className="text-3xl font-bold text-white mt-1">Everything You Need to Know</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
+            Answers to common questions about ResolvAI's architecture and usage.
+          </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {faqItems.map((item, index) => {
             const isOpen = openFaqIndex === index;
             return (
               <div
                 key={index}
-                className="bg-[#111111] border border-[#222222] rounded-2xl overflow-hidden transition-all duration-200"
+                className="bg-neutral-900/40 border border-neutral-800 rounded-xl overflow-hidden"
               >
                 <button
                   onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                  className="w-full p-5 text-left flex items-center justify-between text-sm font-semibold text-white hover:text-[#22c55e] transition-colors"
+                  className="w-full p-4 text-left flex items-center justify-between text-xs sm:text-sm font-semibold text-white hover:text-[#22c55e] transition-colors"
                 >
                   <span>{item.q}</span>
-                  {isOpen ? <ChevronUp className="w-5 h-5 text-[#22c55e]" /> : <ChevronDown className="w-5 h-5 text-neutral-500" />}
+                  {isOpen ? (
+                    <ChevronUp className="w-4 h-4 text-[#22c55e] flex-shrink-0 ml-3" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0 ml-3" />
+                  )}
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-5 text-xs text-neutral-400 leading-relaxed border-t border-[#1f1f1f] pt-4">
+                  <div className="px-4 pb-4 text-xs text-neutral-400 leading-relaxed border-t border-neutral-800/80 pt-3">
                     {item.a}
                   </div>
                 )}
@@ -422,28 +647,68 @@ export default function LandingPage({ onLogin }) {
         </div>
       </section>
 
-      {/* ─── 7. FOOTER ─────────────────────────────────────────────────── */}
-      <footer className="relative z-10 bg-[#070707] border-t border-[#1f1f1f] py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <ResolvAiLogo className="w-7 h-7 drop-shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
-            <span className="text-base font-black text-white">Resolv<span className="text-[#22c55e]">AI</span></span>
-            <span className="text-xs text-neutral-500">· Autonomous Helpdesk System</span>
-          </div>
-
-          <div className="flex items-center gap-6 text-xs text-neutral-500">
-            <button onClick={() => handleQuickLogin('user')} className="hover:text-[#22c55e] transition-colors">User Portal</button>
-            <button onClick={() => handleQuickLogin('admin')} className="hover:text-blue-400 transition-colors">Admin Dashboard</button>
-            <button onClick={() => openOverlayWithScenario('ai-triage')} className="hover:text-white transition-colors">Live Overlay Demo</button>
-          </div>
-
-          <p className="text-xs text-neutral-600">
-            © 2026 ResolvAI Platform. All rights reserved.
+      {/* ─── 7. CTA BANNER ──────────────────────────────────────────────── */}
+      <section className="py-16 px-4 sm:px-6 max-w-4xl mx-auto">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-8 sm:p-10 text-center space-y-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Ready to Test the System?
+          </h2>
+          <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
+            Click any demo role to start testing immediately with pre-loaded tickets and documentation.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => handleQuickLogin('user')}
+              className="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors"
+            >
+              Sign In as User
+            </button>
+            <button
+              onClick={() => handleQuickLogin('employee')}
+              className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs transition-colors"
+            >
+              Sign In as Staff
+            </button>
+            <button
+              onClick={() => handleQuickLogin('admin')}
+              className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs transition-colors"
+            >
+              Sign In as Admin
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 8. CLEAN FOOTER ────────────────────────────────────────────── */}
+      <footer className="border-t border-neutral-800 bg-[#09090b] py-8 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          
+          <div className="flex items-center gap-2">
+            <ResolvAiLogo className="w-5 h-5" />
+            <span className="text-sm font-semibold text-white">ResolvAI</span>
+            <span className="text-xs text-neutral-500">· Support Ticketing Platform</span>
+          </div>
+
+          <div className="flex items-center gap-5 text-xs text-neutral-400">
+            <button
+              onClick={() => setShowDocsModal(true)}
+              className="text-[#22c55e] hover:text-[#1ea750] transition-colors flex items-center gap-1.5 font-medium"
+            >
+              <BookOpen className="w-3.5 h-3.5" /> Documentation
+            </button>
+            <button onClick={() => handleQuickLogin('user')} className="hover:text-white transition-colors">User Portal</button>
+            <button onClick={() => handleQuickLogin('employee')} className="hover:text-white transition-colors">Staff Queue</button>
+            <button onClick={() => handleQuickLogin('admin')} className="hover:text-white transition-colors">Admin Panel</button>
+          </div>
+
+          <p className="text-xs text-neutral-500">
+            © 2026 ResolvAI. All rights reserved.
+          </p>
+
         </div>
       </footer>
 
-      {/* ─── 8. DEMO OVERLAY MODAL ──────────────────────────────────────── */}
+      {/* ─── 9. DEMO OVERLAY MODAL ──────────────────────────────────────── */}
       {showDemoOverlay && (
         <DemoOverlayModal
           initialScenario={initialOverlayScenario}
@@ -451,32 +716,38 @@ export default function LandingPage({ onLogin }) {
         />
       )}
 
-      {/* ─── 9. AUTHENTICATION & REGISTRATION MODAL ───────────────────────── */}
+      {/* ─── 10. DOCUMENTATION MODAL ────────────────────────────────────── */}
+      <DocumentationModal
+        isOpen={showDocsModal}
+        onClose={() => setShowDocsModal(false)}
+      />
+
+      {/* ─── 10. AUTHENTICATION & REGISTRATION MODAL ─────────────────────── */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           
-          <div className="relative w-full max-w-md bg-[#111111] border border-[#2a2a2a] rounded-2xl p-6 sm:p-8 shadow-2xl">
+          <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sm:p-7 shadow-xl">
             <button
               onClick={() => setShowLoginModal(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-all"
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Header branding */}
-            <div className="text-center mb-6">
-              <ResolvAiLogo className="w-12 h-12 inline-block mb-3 drop-shadow-[0_0_15px_rgba(34,197,94,0.4)]" />
-              <h3 className="text-xl font-bold text-white">Welcome to ResolvAI</h3>
-              <p className="text-xs text-neutral-500 mt-1">Sign in or create a new account to continue</p>
+            <div className="text-center mb-5">
+              <ResolvAiLogo className="w-10 h-10 inline-block mb-2" />
+              <h3 className="text-lg font-bold text-white">Welcome to ResolvAI</h3>
+              <p className="text-xs text-neutral-400 mt-0.5">Sign in to your account</p>
             </div>
 
             {/* Auth Mode Tabs (Sign In vs Register) */}
-            <div className="flex bg-[#161616] p-1 rounded-xl border border-[#2a2a2a] mb-6">
+            <div className="flex bg-neutral-950 p-1 rounded-lg border border-neutral-800 mb-5">
               <button
                 onClick={() => { setAuthTab('login'); setLoginError(''); }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${
                   authTab === 'login'
-                    ? 'bg-[#22c55e] text-black shadow-md'
+                    ? 'bg-[#22c55e] text-black font-bold'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
@@ -484,9 +755,9 @@ export default function LandingPage({ onLogin }) {
               </button>
               <button
                 onClick={() => { setAuthTab('register'); setRegError(''); }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${
                   authTab === 'register'
-                    ? 'bg-[#22c55e] text-black shadow-md'
+                    ? 'bg-[#22c55e] text-black font-bold'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
@@ -494,84 +765,77 @@ export default function LandingPage({ onLogin }) {
               </button>
             </div>
 
-            {/* ── Google OAuth Button ── */}
+            {/* Google OAuth Button */}
             {googleClientId ? (
               <>
                 <button
                   type="button"
                   onClick={() => { setGoogleError(''); googleLogin(); }}
-                  className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-semibold text-xs transition-all shadow-md active:scale-95 mb-3"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors mb-3"
                 >
                   <GoogleIcon className="w-4 h-4" />
                   Continue with Google
                 </button>
                 {googleError && (
-                  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 text-red-400 text-[10px] mb-3">
-                    <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />{googleError}
+                  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <span>{googleError}</span>
                   </div>
                 )}
               </>
             ) : (
-              <div className="flex items-start gap-2 bg-neutral-800/40 border border-neutral-700/40 rounded-xl px-3 py-2 mb-3">
-                <Info className="w-3 h-3 text-neutral-600 flex-shrink-0 mt-0.5" />
-                <p className="text-[9px] text-neutral-600 leading-relaxed">
-                  Google sign-in available once <code className="bg-neutral-800 px-0.5 rounded">VITE_GOOGLE_CLIENT_ID</code> is configured.
+              <div className="flex items-start gap-2 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 mb-3">
+                <Info className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-neutral-400 leading-relaxed">
+                  Google sign-in enabled when <code className="bg-neutral-800 px-1 rounded text-neutral-300">VITE_GOOGLE_CLIENT_ID</code> is configured.
                 </p>
               </div>
             )}
 
             {/* Quick Demo Buttons */}
-            <div className="grid grid-cols-3 gap-2.5 mb-6">
+            <div className="grid grid-cols-3 gap-2 mb-5">
               <button
                 type="button"
                 onClick={() => handleQuickLogin('user')}
-                className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-[#22c55e]/50 hover:bg-[#22c55e]/5 transition-all group active:scale-95 text-center"
+                className="flex flex-col items-center gap-1 p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:border-neutral-700 hover:bg-neutral-800 transition-colors text-center"
               >
                 <User className="w-4 h-4 text-[#22c55e]" />
                 <span className="text-[11px] font-semibold text-white">User</span>
-                <span className="text-[9px] text-neutral-500 truncate w-full">Support Portal</span>
+                <span className="text-[9px] text-neutral-500">Customer</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleQuickLogin('employee')}
-                className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-purple-500/50 hover:bg-purple-500/5 transition-all group active:scale-95 text-center"
+                className="flex flex-col items-center gap-1 p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:border-neutral-700 hover:bg-neutral-800 transition-colors text-center"
               >
                 <Headphones className="w-4 h-4 text-purple-400" />
                 <span className="text-[11px] font-semibold text-white">Employee</span>
-                <span className="text-[9px] text-neutral-500 truncate w-full">Staff Workspace</span>
+                <span className="text-[9px] text-neutral-500">Support Staff</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleQuickLogin('admin')}
-                className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group active:scale-95 text-center"
+                className="flex flex-col items-center gap-1 p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:border-neutral-700 hover:bg-neutral-800 transition-colors text-center"
               >
                 <ShieldCheck className="w-4 h-4 text-blue-400" />
                 <span className="text-[11px] font-semibold text-white">Admin</span>
-                <span className="text-[9px] text-neutral-500 truncate w-full">Admin Panel</span>
+                <span className="text-[9px] text-neutral-500">Manager</span>
               </button>
             </div>
 
             <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-[#222222]" />
-              <span className="text-[10px] text-neutral-500 font-mono uppercase">
-                {authTab === 'login' ? 'Or Enter Credentials' : 'Fill Registration Details'}
-
+              <div className="flex-1 h-px bg-neutral-800" />
+              <span className="text-[10px] text-neutral-500 uppercase tracking-wider">
+                {authTab === 'login' ? 'Or With Email' : 'Registration Details'}
               </span>
-              <div className="flex-1 h-px bg-[#222222]" />
+              <div className="flex-1 h-px bg-neutral-800" />
             </div>
 
             {/* TAB 1: SIGN IN FORM */}
             {authTab === 'login' ? (
-              <form onSubmit={handleFormLogin} className="space-y-3.5">
-                <div className="flex items-start gap-2 bg-blue-500/8 border border-blue-500/20 rounded-xl px-3 py-2">
-                  <Info className="w-3 h-3 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-blue-300/80 leading-relaxed">
-                    <span className="font-semibold text-blue-300">Employees:</span> use credentials set by your admin.
-                  </p>
-                </div>
-
+              <form onSubmit={handleFormLogin} className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-neutral-400 mb-1">Email Address</label>
                   <input
@@ -580,7 +844,7 @@ export default function LandingPage({ onLogin }) {
                     placeholder="you@company.com"
                     value={loginEmail}
                     onChange={e => setLoginEmail(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
                   />
                 </div>
 
@@ -592,12 +856,12 @@ export default function LandingPage({ onLogin }) {
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={e => setLoginPassword(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
                   />
                 </div>
 
                 {loginError && (
-                  <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                  <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
                     {loginError}
                   </div>
                 )}
@@ -605,18 +869,18 @@ export default function LandingPage({ onLogin }) {
                 <button
                   type="submit"
                   disabled={loginLoading}
-                  className="w-full py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold text-xs transition-all active:scale-95 disabled:opacity-50 mt-2 shadow-lg shadow-[#22c55e]/20"
+                  className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2"
                 >
                   {loginLoading ? 'Signing in...' : 'Sign In'}
                 </button>
               </form>
             ) : (
-              /* TAB 2: CREATE ACCOUNT / REGISTER FORM (End-Users only) */
+              /* TAB 2: CREATE ACCOUNT FORM */
               <form onSubmit={handleFormRegister} className="space-y-3">
-                <div className="flex items-start gap-2 bg-[#22c55e]/8 border border-[#22c55e]/20 rounded-xl px-3 py-2">
-                  <Info className="w-3 h-3 text-[#22c55e] flex-shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-[#22c55e]/80 leading-relaxed">
-                    For <span className="font-semibold">Support Users</span> only. Employees are added by admins.
+                <div className="flex items-start gap-2 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2">
+                  <Info className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-neutral-400 leading-relaxed">
+                    Registers a <span className="text-white font-medium">Customer Support User</span> account.
                   </p>
                 </div>
 
@@ -628,7 +892,7 @@ export default function LandingPage({ onLogin }) {
                     placeholder="John Doe"
                     value={regName}
                     onChange={e => setRegName(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
                   />
                 </div>
 
@@ -640,7 +904,7 @@ export default function LandingPage({ onLogin }) {
                     placeholder="john@example.com"
                     value={regEmail}
                     onChange={e => setRegEmail(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
                   />
                 </div>
 
@@ -653,12 +917,12 @@ export default function LandingPage({ onLogin }) {
                     placeholder="••••••••"
                     value={regPassword}
                     onChange={e => setRegPassword(e.target.value)}
-                    className="w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-700 focus:outline-none focus:border-[#22c55e]/50"
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
                   />
                 </div>
 
                 {regError && (
-                  <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                  <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
                     {regError}
                   </div>
                 )}
@@ -666,9 +930,9 @@ export default function LandingPage({ onLogin }) {
                 <button
                   type="submit"
                   disabled={regLoading}
-                  className="w-full py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-bold text-xs transition-all active:scale-95 disabled:opacity-50 mt-2 shadow-lg shadow-[#22c55e]/20"
+                  className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2"
                 >
-                  {regLoading ? 'Creating Account...' : 'Create My Account'}
+                  {regLoading ? 'Creating Account...' : 'Create Account'}
                 </button>
               </form>
             )}
@@ -677,8 +941,6 @@ export default function LandingPage({ onLogin }) {
 
         </div>
       )}
-
-
 
     </div>
   );
