@@ -216,16 +216,18 @@ export default function LandingPage({ onLogin }) {
 
           <div className="flex items-center gap-2.5">
             <button
+              id="header-sign-in-btn"
               onClick={() => { setAuthTab('login'); setShowLoginModal(true); }}
               className="px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 transition-colors"
             >
               Sign In
             </button>
             <button
-              onClick={() => handleQuickLogin('admin')}
+              id="header-register-btn"
+              onClick={() => { setAuthTab('register'); setShowLoginModal(true); }}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs hover:bg-[#1ea750] transition-colors"
             >
-              Launch Live App <ArrowRight className="w-3.5 h-3.5" />
+              Create Account <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
