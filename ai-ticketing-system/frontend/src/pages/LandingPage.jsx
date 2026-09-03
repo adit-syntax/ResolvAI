@@ -1,68 +1,15 @@
-/**
- * LandingPage.jsx — Clean, Modern & Realistic SaaS Landing Page for ResolvAI
- * Focuses on real capabilities, clear product workflows, and zero artificial metrics.
- */
-
 import React, { useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
-import DemoOverlayModal from '../components/DemoOverlayModal.jsx';
-import LandingCarousel from '../components/LandingCarousel.jsx';
 import DocumentationModal from '../components/DocumentationModal.jsx';
 import {
   ArrowRight, ShieldCheck, User, Bot, AlertTriangle,
-  MessageSquare, BarChart3, CheckCircle2, ChevronDown, ChevronUp,
+  MessageSquare, BarChart3, CheckCircle2,
   Layers, Headphones, X, UserPlus, LogIn, Info,
-  Search, Users, Clock, FileText, Check, Play, Sparkles, BookOpen
+  Search, Users, BookOpen, ExternalLink, Activity
 } from 'lucide-react';
 import { authApi, setAuthToken } from '../api.js';
-
-
-/* ── ScrollReveal: fades + slides up on scroll ─────────────────────────── */
-function ScrollReveal({ children, delay = 0, className = '' }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 22 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-/* ── HeroMeshBackground: slow blobs + mouse-tracking glow ──────────────── */
-function HeroMeshBackground() {
-  const containerRef = useRef(null);
-  const [pos, setPos] = React.useState({ x: 50, y: 50 });
-  const handleMouseMove = useCallback((e) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPos({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 });
-  }, []);
-  return (
-    <div ref={containerRef} onMouseMove={handleMouseMove} className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      <motion.div className="absolute rounded-full"
-        style={{ width: 600, height: 600, background: 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)', left: '-10%', top: '-20%', filter: 'blur(60px)' }}
-        animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
-        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div className="absolute rounded-full"
-        style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(34,197,94,0.05) 0%, transparent 70%)', right: '-5%', bottom: '5%', filter: 'blur(80px)' }}
-        animate={{ x: [0, -25, 0], y: [0, -15, 0] }}
-        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <div className="absolute rounded-full transition-all duration-700 ease-out"
-        style={{ width: 400, height: 400, background: 'radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%)', left: `calc(${pos.x}% - 200px)`, top: `calc(${pos.y}% - 200px)`, filter: 'blur(50px)' }}
-      />
-    </div>
-  );
-}
 
 function GoogleIcon({ className = 'w-4 h-4' }) {
   return (
@@ -81,68 +28,80 @@ const DEMO_CREDENTIALS = {
   admin:    { email: 'admin@gmail.com',       password: 'admin123'    },
 };
 
-const REAL_TICKET_EXAMPLES = [
+const LIVE_EXAMPLES = [
   {
     id: 'vpn',
-    badge: 'Access',
-    title: 'VPN Connection Setup',
-    description: 'Cannot connect to company VPN from remote office after updating macOS.',
-    category: 'Access',
-    priority: 'Normal',
-    matchedSop: 'SOP-101: Remote Access & VPN Configuration',
-    resolutionType: 'auto_resolved',
-    actionText: 'Instant Auto-Response Sent',
-    actionDetail: 'Provided verified VPN profile configuration steps and macOS client download link.',
-  },
-  {
-    id: 'billing',
-    badge: 'Billing',
-    title: 'Duplicate Monthly Charge',
-    description: 'My account was billed twice for the monthly subscription on the same invoice.',
-    category: 'Billing',
-    priority: 'Medium',
-    matchedSop: 'SOP-204: Billing & Refund Verification',
-    resolutionType: 'auto_resolved',
-    actionText: 'Instant Auto-Response Sent',
-    actionDetail: 'Identified duplicate invoice entry and initiated verification for the refund process.',
+    tag: 'Access / IT',
+    title: 'VPN connection dropping after macOS update',
+    desc: 'Unable to connect to internal staging gateway via GlobalProtect after Sequoia 15.2 update.',
+    sop: 'KB-AUTH-101: SSO & VPN Troubleshooting Runbook',
+    outcome: 'Auto-Matched to SOP with config snippet & routed to IT queue.',
+    confidence: '94%',
+    priority: 'Normal'
   },
   {
     id: 'outage',
-    badge: 'Technical',
-    title: 'API Gateway 502 Errors',
-    description: 'Multiple endpoints returning 502 Bad Gateway under normal traffic volume.',
-    category: 'Server',
-    priority: 'Critical',
-    matchedSop: 'SOP-502: Infrastructure Incident Response',
-    resolutionType: 'assigned',
-    actionText: 'Assigned to DevOps Team',
-    actionDetail: 'High-severity incident routed to available engineer with lowest active workload.',
+    tag: 'Infrastructure / DevOps',
+    title: '502 Bad Gateway on payments checkout endpoint',
+    desc: 'Multiple upstream pods reporting OOM restarts on checkout-service container.',
+    sop: 'KB-INFRA-202: API Gateway 502 & Outage Mitigation',
+    outcome: 'Triggered P1 incident alert & auto-assigned to on-call engineer.',
+    confidence: '98%',
+    priority: 'Critical'
   },
   {
-    id: 'hr',
-    badge: 'HR / Policy',
-    title: 'Annual Leave Carry-Over Policy',
-    description: 'How many days of unused vacation leave can be carried over into this year?',
-    category: 'HR',
-    priority: 'Low',
-    matchedSop: 'SOP-301: Employee Benefits & Leave Policy',
-    resolutionType: 'auto_resolved',
-    actionText: 'Instant Auto-Response Sent',
-    actionDetail: 'Retrieved verified policy excerpt regarding annual leave carry-over limits.',
+    id: 'billing',
+    tag: 'Finance',
+    title: 'Duplicate charge on invoice #INV-2026-88',
+    desc: 'Corporate credit card billed twice for annual seats on March 1st cycle.',
+    sop: 'KB-FIN-404: Duplicate Payment & Refund Verification',
+    outcome: 'Auto-verified invoice status via tool & generated draft refund notice.',
+    confidence: '91%',
+    priority: 'Medium'
+  }
+];
+
+const ARCHITECTURE_PILLARS = [
+  {
+    icon: Bot,
+    title: 'Autonomous ReAct Agent Loop',
+    desc: 'Executes multi-step reasoning: evaluates issues, runs diagnostic tools (system health, user lookup, invoice check), and preserves auditable traces.'
   },
+  {
+    icon: Search,
+    title: 'Hybrid Vector RAG (384-D + BM25)',
+    desc: 'Combines dense cosine similarity with sparse BM25 token matching using Reciprocal Rank Fusion (RRF) for zero-hallucination SOP citations.'
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Zero-Leakage PII Guardrails',
+    desc: 'Sanitizes prompts before dispatching to LLMs. Validates credit cards using the Luhn algorithm and redacts API keys, tokens, and credentials.'
+  },
+  {
+    icon: Layers,
+    title: 'Semantic Duplicate & Outage Clustering',
+    desc: 'Computes vector embeddings to detect redundant tickets and clusters cascading incident spikes within rolling 60-minute time windows.'
+  },
+  {
+    icon: Users,
+    title: 'Workload-Balanced Routing',
+    desc: 'Dispatches unresolvable tickets to team members by evaluating department domain, skill tags, and live active ticket counts.'
+  },
+  {
+    icon: MessageSquare,
+    title: 'Real-Time WebSocket Bus',
+    desc: 'Instant ticket status broadcasts, SLA escalation sweeps, and interactive chat between customers and assigned support staff.'
+  }
 ];
 
 export default function LandingPage({ onLogin }) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [authTab, setAuthTab] = useState('login');
-  const [showDemoOverlay, setShowDemoOverlay] = useState(false);
   const [showDocsModal, setShowDocsModal] = useState(false);
-  const [initialOverlayScenario, setInitialOverlayScenario] = useState('ai-triage');
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
-  // Interactive Ticket Example Selector
-  const [selectedExampleIndex, setSelectedExampleIndex] = useState(0);
-  const selectedExample = REAL_TICKET_EXAMPLES[selectedExampleIndex];
+  const [activeTab, setActiveTab] = useState(0);
+  const currentExample = LIVE_EXAMPLES[activeTab];
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -156,12 +115,7 @@ export default function LandingPage({ onLogin }) {
   const [regPassword, setRegPassword] = useState('');
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
-
-  // Google OAuth state
   const [googleError, setGoogleError] = useState('');
-
-  // FAQ Accordion state
-  const [openFaqIndex, setOpenFaqIndex] = useState(0);
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -181,7 +135,7 @@ export default function LandingPage({ onLogin }) {
         onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
         setShowLoginModal(false);
       } catch (err) {
-        setGoogleError(err.message || 'Google sign-in failed. Please try again.');
+        setGoogleError(err.message || 'Google sign-in failed.');
       }
     },
     onError: () => setGoogleError('Google sign-in was cancelled or failed.'),
@@ -196,7 +150,7 @@ export default function LandingPage({ onLogin }) {
       onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
       setShowLoginModal(false);
     } catch (err) {
-      setLoginError(err.message || 'Demo login failed. Make sure the backend server is running.');
+      setLoginError(err.message || 'Connection to backend failed. Please verify API is running.');
     }
   };
 
@@ -210,7 +164,7 @@ export default function LandingPage({ onLogin }) {
       onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
       setShowLoginModal(false);
     } catch (err) {
-      setLoginError(err.message || 'Invalid credentials. Please check your email and password.');
+      setLoginError(err.message || 'Invalid email or password.');
     } finally {
       setLoginLoading(false);
     }
@@ -219,19 +173,9 @@ export default function LandingPage({ onLogin }) {
   const handleFormRegister = async (e) => {
     e.preventDefault();
     setRegError('');
-
-    if (regName.trim().length < 2) {
-      setRegError('Please enter your full name (at least 2 characters).');
-      return;
-    }
-    if (!regEmail.trim().includes('@')) {
-      setRegError('Please enter a valid email address.');
-      return;
-    }
-    if (regPassword.length < 6) {
-      setRegError('Password must be at least 6 characters.');
-      return;
-    }
+    if (regName.trim().length < 2) return setRegError('Please enter your full name.');
+    if (!regEmail.trim().includes('@')) return setRegError('Please enter a valid email.');
+    if (regPassword.length < 6) return setRegError('Password must be at least 6 characters.');
 
     setRegLoading(true);
     try {
@@ -240,798 +184,358 @@ export default function LandingPage({ onLogin }) {
       onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
       setShowLoginModal(false);
     } catch (err) {
-      setRegError(err.message || 'Registration failed. Please try again.');
+      setRegError(err.message || 'Registration failed.');
     } finally {
       setRegLoading(false);
     }
   };
 
-  const openOverlayWithScenario = (scenarioId) => {
-    setInitialOverlayScenario(scenarioId || 'ai-triage');
-    setShowDemoOverlay(true);
-  };
-
-  const faqItems = [
-    {
-      q: 'How does the automated response system work?',
-      a: 'When a user submits a ticket, the system parses the description, identifies the category and intent, and queries the knowledge base for verified documentation. If an exact answer is found, an instant response is suggested to the user.',
-    },
-    {
-      q: 'How are tickets routed to employees when they cannot be auto-resolved?',
-      a: 'Tickets requiring human intervention are assigned to team members based on their relevant skills and their current active workload, preventing any single team member from becoming overwhelmed.',
-    },
-    {
-      q: 'Can support staff and users communicate in real time?',
-      a: 'Yes. Each ticket has an integrated WebSocket-powered conversation thread where users and assigned staff can exchange messages, attachments, and status updates.',
-    },
-    {
-      q: 'What roles exist in ResolvAI?',
-      a: 'ResolvAI supports three distinct roles: End Users (who file and view tickets), Support Employees (who manage and resolve assigned tickets), and Administrators (who oversee team workloads, user directory, and analytics).',
-    },
-    {
-      q: 'Can I test all features without setting up an account?',
-      a: 'Yes. Use the Quick Demo buttons in the header or login modal to log in immediately as a User, Support Employee, or Administrator.',
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-[#09090b] text-neutral-100 font-sans selection:bg-[#22c55e] selection:text-black">
-
-      {/* ─── 1. CLEAN HEADER ────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-[#09090b]/90 backdrop-blur-md border-b border-neutral-800">
+      
+      {/* ─── NAVIGATION BAR ─── */}
+      <header className="sticky top-0 z-40 bg-[#09090b]/80 backdrop-blur-md border-b border-neutral-800/80">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          
-          {/* Logo Branding — Clean, no glow halos or extra badges */}
-          <div
-            className="flex items-center gap-2.5 cursor-pointer"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <ResolvAiLogo className="w-7 h-7" />
-            <span className="text-base font-bold text-white tracking-tight">
+            <span className="text-base font-bold tracking-tight text-white">
               Resolv<span className="text-[#22c55e]">AI</span>
             </span>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-400">
+          <nav className="hidden md:flex items-center gap-7 text-xs font-medium text-neutral-400">
             <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#roles" className="hover:text-white transition-colors">Portals</a>
-            <button
-              onClick={() => setShowDocsModal(true)}
-              className="hover:text-white transition-colors flex items-center gap-1"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-[#22c55e]" /> Docs
+            <a href="#architecture" className="hover:text-white transition-colors">Core Architecture</a>
+            <button onClick={() => setShowDocsModal(true)} className="hover:text-white transition-colors flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5 text-[#22c55e]" /> Documentation
             </button>
-            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+            <a href="https://github.com/adit-syntax/ResolvAI" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+              GitHub <ExternalLink className="w-3 h-3 text-neutral-500" />
+            </a>
           </nav>
 
-          {/* Header Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
-              onClick={() => handleQuickLogin('user')}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors"
+              onClick={() => { setAuthTab('login'); setShowLoginModal(true); }}
+              className="px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 transition-colors"
             >
-              <User className="w-3.5 h-3.5 text-[#22c55e]" /> User Demo
+              Sign In
             </button>
-
             <button
               onClick={() => handleQuickLogin('admin')}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs hover:bg-[#1ea750] transition-colors"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" /> Admin Demo
+              Launch Live App <ArrowRight className="w-3.5 h-3.5" />
             </button>
-
-            <motion.button
-              id="header-sign-in-btn"
-              onClick={() => { setAuthTab('login'); setShowLoginModal(true); }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs cursor-pointer"
-              whileHover={{ scale: 1.04, boxShadow: '0 0 18px rgba(34,197,94,0.35)' }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.2 }}
-            >
-              Sign In <ArrowRight className="w-3.5 h-3.5" />
-            </motion.button>
           </div>
-
         </div>
       </header>
 
-      {/* ─── 2. HERO SECTION ────────────────────────────────────────────── */}
-      <section className="relative pt-16 pb-16 px-4 sm:px-6 max-w-5xl mx-auto text-center overflow-hidden">
-        <HeroMeshBackground />
-        
-        {/* Simple Honest Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="relative inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-400 mb-6 overflow-hidden"
-        >
+      {/* ─── HERO SECTION ─── */}
+      <section className="relative pt-20 pb-16 px-4 sm:px-6 max-w-4xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-400 mb-6">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-60" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-70" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22c55e]" />
           </span>
-          <span>Intelligent Helpdesk &amp; Workload Management</span>
-          <motion.span
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent"
-            animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
-          />
-        </motion.div>
+          <span>Open-Source AI Helpdesk &amp; Workload Balancing</span>
+        </div>
 
-        {/* Hero Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-5"
-        >
-          Support Ticketing,{' '}
-          <br className="hidden sm:inline" />
-          <span style={{ background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #86efac 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', filter: 'drop-shadow(0 0 24px rgba(34,197,94,0.3))' }}>
-            Organized
-          </span>
-          {' '}and{' '}
-          <span style={{ background: 'linear-gradient(135deg, #22c55e 0%, #4ade80 60%, #86efac 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', filter: 'drop-shadow(0 0 24px rgba(34,197,94,0.28))' }}>
-            Automated
-          </span>
-          .
-        </motion.h1>
+        <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-[1.15] mb-5">
+          Autonomous Incident Triage, <br className="hidden sm:inline" />
+          <span className="text-[#22c55e]">Grounded in Verified Runbooks.</span>
+        </h1>
 
-        {/* Subtitle */}
         <p className="max-w-2xl mx-auto text-sm sm:text-base text-neutral-400 leading-relaxed mb-8">
-          ResolvAI classifies incoming tickets, suggests instant answers using your team's verified documentation, and assigns unresolved cases to the right team member based on active workload.
+          ResolvAI categorizes incoming tickets, scrubs sensitive PII, grounds solutions against verified SOPs using hybrid vector search, and balances active workloads across your engineering staff.
         </p>
 
-        {/* CTAs */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
-          <motion.button
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-14">
+          <button
             onClick={() => handleQuickLogin('user')}
-            className="px-5 py-2.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs inline-flex items-center gap-2"
-            whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(16,185,129,0.4)' }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ duration: 0.22 }}
+            className="px-5 py-2.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs inline-flex items-center gap-2 hover:bg-[#1ea750] transition-colors"
           >
-            <Headphones className="w-4 h-4" /> Open Support Portal
-          </motion.button>
-
+            <User className="w-4 h-4" /> Try as Customer
+          </button>
+          <button
+            onClick={() => handleQuickLogin('employee')}
+            className="px-5 py-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-200 font-semibold text-xs inline-flex items-center gap-2 hover:bg-neutral-800 transition-colors"
+          >
+            <Headphones className="w-4 h-4 text-purple-400" /> Try as Support Staff
+          </button>
           <button
             onClick={() => handleQuickLogin('admin')}
-            className="px-5 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 font-semibold text-xs transition-colors inline-flex items-center gap-2"
+            className="px-5 py-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-200 font-semibold text-xs inline-flex items-center gap-2 hover:bg-neutral-800 transition-colors"
           >
-            <ShieldCheck className="w-4 h-4 text-blue-400" /> Admin Dashboard
-          </button>
-
-          <button
-            onClick={() => openOverlayWithScenario('ai-triage')}
-            className="px-5 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 font-semibold text-xs transition-colors inline-flex items-center gap-2"
-          >
-            <Play className="w-4 h-4 text-[#22c55e]" /> Watch Simulated Flow
+            <ShieldCheck className="w-4 h-4 text-blue-400" /> Try as Admin
           </button>
         </div>
 
-        {/* ─── REAL TICKET PROCESSING DEMO WIDGET ─────────────────────── */}
-        <div className="text-left rounded-2xl p-5 sm:p-6 shadow-2xl max-w-4xl mx-auto" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: '0 0 0 1px rgba(34,197,94,0.06), 0 24px 60px rgba(0,0,0,0.5)' }}>
-          <div className="pb-4 mb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            <span className="text-xs font-semibold text-white uppercase tracking-wider block">
-              How a Ticket is Handled
-            </span>
-            <span className="text-xs text-neutral-400">
-              Select an example issue to see how ResolvAI categorizes and resolves it.
+        {/* ─── REAL INTERACTIVE PIPELINE DEMO ─── */}
+        <div id="how-it-works" className="text-left rounded-2xl bg-neutral-950/80 border border-neutral-800 p-5 sm:p-6 shadow-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-neutral-800/80 gap-2">
+            <div>
+              <span className="text-xs font-semibold text-white tracking-wide block">How Tickets Are Evaluated in Real Time</span>
+              <span className="text-xs text-neutral-400">Select an issue to inspect automated categorization, PII filtering, and SOP retrieval.</span>
+            </div>
+            <span className="text-[11px] font-mono text-[#22c55e] bg-[#22c55e]/10 px-2.5 py-1 rounded border border-[#22c55e]/20 self-start sm:self-auto">
+              Pipeline: Active
             </span>
           </div>
 
-          {/* Example Selector Chips */}
-          <div className="relative flex flex-wrap gap-2 mb-5">
-            {REAL_TICKET_EXAMPLES.map((item, idx) => (
+          {/* Issue selector pills */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {LIVE_EXAMPLES.map((ex, i) => (
               <button
-                key={item.id}
-                onClick={() => setSelectedExampleIndex(idx)}
-                className="relative px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 border"
-                style={{ borderColor: idx === selectedExampleIndex ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.07)', color: idx === selectedExampleIndex ? '#fff' : '#737373', zIndex: 1 }}
+                key={ex.id}
+                onClick={() => setActiveTab(i)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                  activeTab === i
+                    ? 'bg-neutral-800 text-white border-neutral-600'
+                    : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-neutral-700'
+                }`}
               >
-                {idx === selectedExampleIndex && (
-                  <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-lg" style={{ background: 'rgba(34,197,94,0.12)' }} transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
-                )}
-                <span className="relative z-10">{item.title}</span>
+                {ex.tag}
               </button>
             ))}
           </div>
 
-          {/* Output Card */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedExampleIndex}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
-            >
-            
-            {/* Input Ticket Box */}
-            <div className="p-4 rounded-xl space-y-2.5" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
-                Ticket Information
-              </span>
-              <p className="text-xs font-semibold text-white">{selectedExample.title}</p>
-              <p className="text-xs text-neutral-400 leading-relaxed font-mono">
-                "{selectedExample.description}"
-              </p>
-              <div className="flex gap-2 pt-2">
-                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-300 border border-neutral-800">
-                  Category: {selectedExample.category}
+          {/* Ticket inspection grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800/80 space-y-2.5">
+              <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">Incoming Customer Request</span>
+              <p className="text-xs font-semibold text-white">{currentExample.title}</p>
+              <p className="text-xs text-neutral-400 leading-relaxed font-mono">"{currentExample.desc}"</p>
+              <div className="pt-2 flex items-center gap-2">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-neutral-300">
+                  Priority: {currentExample.priority}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-300 border border-neutral-800">
-                  Priority: {selectedExample.priority}
+                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-[#22c55e]">
+                  Confidence: {currentExample.confidence}
                 </span>
               </div>
             </div>
 
-            {/* Processing Result */}
-            <div className="p-4 rounded-xl space-y-2.5 flex flex-col justify-between" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800/80 space-y-2.5 flex flex-col justify-between">
               <div>
-                <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">
-                  System Resolution
-                </span>
+                <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">Autonomous System Action</span>
                 <div className="text-xs font-semibold text-white mt-1 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />
-                  {selectedExample.actionText}
+                  {currentExample.outcome}
                 </div>
-                <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
-                  {selectedExample.actionDetail}
-                </p>
               </div>
-
-              <div className="pt-2 text-[11px] text-neutral-500" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                Documentation: <span className="text-neutral-300">{selectedExample.matchedSop}</span>
+              <div className="pt-2 border-t border-neutral-800/80 text-[11px] text-neutral-500">
+                Grounded Document: <span className="text-neutral-300">{currentExample.sop}</span>
               </div>
             </div>
-
-            </motion.div>
-          </AnimatePresence>
-
-        </div>
-
-      </section>
-
-      {/* ─── 3. HOW IT WORKS ────────────────────────────────────────────── */}
-      <section id="how-it-works" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            How ResolvAI Works
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
-            A structured, three-step flow from ticket submission to verified resolution.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          <ScrollReveal delay={0}>
-          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3 h-full">
-            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
-              1
-            </div>
-            <h3 className="text-sm font-semibold text-white">Ticket Ingestion &amp; Triage</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Users submit issues via the support portal. The system reads the description and automatically determines the category and urgency.
-            </p>
           </div>
-          </ScrollReveal>
-
-          <ScrollReveal delay={0.12}>
-          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3 h-full">
-            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
-              2
-            </div>
-            <h3 className="text-sm font-semibold text-white">Knowledge Base Query</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              ResolvAI searches your organization's documentation. If a matching SOP is found, it generates a verified answer immediately.
-            </p>
-          </div>
-          </ScrollReveal>
-
-          <ScrollReveal delay={0.24}>
-          <div className="bg-neutral-900/50 border border-neutral-800 p-5 rounded-xl space-y-3 h-full">
-            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-xs font-bold text-[#22c55e]">
-              3
-            </div>
-            <h3 className="text-sm font-semibold text-white">Smart Routing &amp; Live Chat</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Unresolved issues are assigned to the employee with matching skills and lowest current workload for real-time chat resolution.
-            </p>
-          </div>
-          </ScrollReveal>
-
         </div>
       </section>
 
-      {/* ─── 4. CORE FEATURES ───────────────────────────────────────────── */}
-      <section id="features" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
+      {/* ─── ARCHITECTURE SECTION ─── */}
+      <section id="architecture" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800/80">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Key Platform Features
+            Production Engineering Architecture
           </h2>
           <p className="text-xs sm:text-sm text-neutral-400 mt-2">
-            Built to handle everyday support tasks reliably without unnecessary complexity.
+            Built as a real, reliable microservice — no black boxes, no fake metrics, strictly auditable code.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-          
-          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
-            <Bot className="w-5 h-5 text-[#22c55e] mb-2" />
-            <h3 className="text-sm font-semibold text-white">Automated Triage</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Automatically assigns categories (Billing, Access, Server, HR) and priority levels based on ticket context.
-            </p>
-          </div>
-
-          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
-            <Search className="w-5 h-5 text-blue-400 mb-2" />
-            <h3 className="text-sm font-semibold text-white">Knowledge Base Matching</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Matches user queries against verified standard operating procedures (SOPs) to suggest proven solutions.
-            </p>
-          </div>
-
-          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
-            <Users className="w-5 h-5 text-purple-400 mb-2" />
-            <h3 className="text-sm font-semibold text-white">Workload-Based Routing</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Routes tickets to team members by checking active ticket counts, department, and skill-tags to prevent bottlenecks.
-            </p>
-          </div>
-
-          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
-            <MessageSquare className="w-5 h-5 text-amber-400 mb-2" />
-            <h3 className="text-sm font-semibold text-white">Live Support Chat</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Integrated real-time WebSocket messaging for ongoing troubleshooting and resolution verification between user and agent.
-            </p>
-          </div>
-
-          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
-            <Layers className="w-5 h-5 text-emerald-400 mb-2" />
-            <h3 className="text-sm font-semibold text-white">Duplicate Detection</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Detects similar tickets submitted by users to alert staff and prevent redundant troubleshooting work.
-            </p>
-          </div>
-
-          <div className="bg-neutral-900/40 border border-neutral-800 p-5 rounded-xl space-y-2">
-            <BarChart3 className="w-5 h-5 text-indigo-400 mb-2" />
-            <h3 className="text-sm font-semibold text-white">Analytics Dashboard</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Detailed tracking for open vs. closed tickets, team resolution times, department workload, and SLA compliance.
-            </p>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ─── 5. INTERACTIVE CAPABILITIES CAROUSEL ──────────────────────── */}
-      <section className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
-        <div className="text-center max-w-2xl mx-auto mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Explore Core System Capabilities
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
-            Step through the key modules powering automated triage, knowledge retrieval, and live helpdesk routing.
-          </p>
-        </div>
-
-        <LandingCarousel onOpenOverlay={openOverlayWithScenario} />
-      </section>
-
-      {/* ─── 5. ROLE PORTALS ────────────────────────────────────────────── */}
-      <section id="roles" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Dedicated Workspaces for Every Role
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
-            Tailored views for customers, support staff, and team administrators.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* User Portal */}
-          <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono font-medium text-[#22c55e] uppercase">Customer Role</span>
-                <User className="w-4 h-4 text-[#22c55e]" />
-              </div>
-              <h3 className="text-base font-semibold text-white">Support Portal</h3>
-              <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                Simple interface for users to submit requests, track ticket status, and receive answers or communicate with staff.
-              </p>
-            </div>
-            <button
-              onClick={() => handleQuickLogin('user')}
-              className="w-full py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-white transition-colors"
-            >
-              Open User View
-            </button>
-          </div>
-
-          {/* Staff Workspace */}
-          <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono font-medium text-purple-400 uppercase">Support Role</span>
-                <Headphones className="w-4 h-4 text-purple-400" />
-              </div>
-              <h3 className="text-base font-semibold text-white">Staff Workspace</h3>
-              <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                Assigned ticket queue with AI-assisted response drafting, internal collaboration notes, and status management.
-              </p>
-            </div>
-            <button
-              onClick={() => handleQuickLogin('employee')}
-              className="w-full py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-white transition-colors"
-            >
-              Open Staff View
-            </button>
-          </div>
-
-          {/* Admin Console */}
-          <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-5 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono font-medium text-blue-400 uppercase">Admin Role</span>
-                <ShieldCheck className="w-4 h-4 text-blue-400" />
-              </div>
-              <h3 className="text-base font-semibold text-white">Admin Console</h3>
-              <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
-                Complete team directory, workload overview, system settings, knowledge base curation, and analytics charts.
-              </p>
-            </div>
-            <button
-              onClick={() => handleQuickLogin('admin')}
-              className="w-full py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-white transition-colors"
-            >
-              Open Admin View
-            </button>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ─── 6. FAQ ─────────────────────────────────────────────────────── */}
-      <section id="faq" className="py-16 px-4 sm:px-6 max-w-3xl mx-auto border-t border-neutral-800">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Frequently Asked Questions
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
-            Answers to common questions about ResolvAI's architecture and usage.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          {faqItems.map((item, index) => {
-            const isOpen = openFaqIndex === index;
+          {ARCHITECTURE_PILLARS.map((pillar) => {
+            const Icon = pillar.icon;
             return (
-              <div
-                key={index}
-                className="bg-neutral-900/40 border border-neutral-800 rounded-xl overflow-hidden"
-              >
-                <button
-                  onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                  className="w-full p-4 text-left flex items-center justify-between text-xs sm:text-sm font-semibold text-white hover:text-[#22c55e] transition-colors"
-                >
-                  <span>{item.q}</span>
-  <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.25 }}>
-                    <ChevronDown className={`w-4 h-4 flex-shrink-0 ml-3 ${isOpen ? 'text-[#22c55e]' : 'text-neutral-500'}`} />
-                  </motion.div>
-                </button>
-<AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div key="faq-body" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="overflow-hidden">
-                        <div className="px-4 pb-4 text-xs text-neutral-400 leading-relaxed border-t border-neutral-800/80 pt-3">{item.a}</div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              <div key={pillar.title} className="bg-neutral-900/30 border border-neutral-800/90 p-5 rounded-xl space-y-2.5 hover:border-neutral-700 transition-colors">
+                <Icon className="w-5 h-5 text-[#22c55e] mb-1" />
+                <h3 className="text-sm font-semibold text-white">{pillar.title}</h3>
+                <p className="text-xs text-neutral-400 leading-relaxed">{pillar.desc}</p>
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* ─── 7. CTA BANNER ──────────────────────────────────────────────── */}
-      <section className="py-16 px-4 sm:px-6 max-w-4xl mx-auto">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-8 sm:p-10 text-center space-y-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Ready to Test the System?
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
-            Click any demo role to start testing immediately with pre-loaded tickets and documentation.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <button
-              onClick={() => handleQuickLogin('user')}
-              className="px-4 py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors"
-            >
-              Sign In as User
-            </button>
-            <button
-              onClick={() => handleQuickLogin('employee')}
-              className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs transition-colors"
-            >
-              Sign In as Staff
-            </button>
-            <button
-              onClick={() => handleQuickLogin('admin')}
-              className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs transition-colors"
-            >
-              Sign In as Admin
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 8. CLEAN FOOTER ────────────────────────────────────────────── */}
-      <footer className="border-t border-neutral-800 bg-[#09090b] py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          
-          <div className="flex items-center gap-2">
+      {/* ─── CLEAN FOOTER ─── */}
+      <footer className="border-t border-neutral-800 bg-[#09090b] py-10 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-neutral-400">
+          <div className="flex items-center gap-2.5">
             <ResolvAiLogo className="w-5 h-5" />
-            <span className="text-sm font-semibold text-white">ResolvAI</span>
-            <span className="text-xs text-neutral-500">· Support Ticketing Platform</span>
+            <span className="font-semibold text-white">ResolvAI</span>
+            <span className="text-neutral-500">· Open-Source AI Ticketing Platform</span>
           </div>
 
-          <div className="flex items-center gap-5 text-xs text-neutral-400">
-            <button
-              onClick={() => setShowDocsModal(true)}
-              className="text-[#22c55e] hover:text-[#1ea750] transition-colors flex items-center gap-1.5 font-medium"
-            >
-              <BookOpen className="w-3.5 h-3.5" /> Documentation
+          <div className="flex items-center gap-6">
+            <button onClick={() => setShowDocsModal(true)} className="hover:text-white transition-colors">
+              Documentation
             </button>
-            <button onClick={() => handleQuickLogin('user')} className="hover:text-white transition-colors">User Portal</button>
-            <button onClick={() => handleQuickLogin('employee')} className="hover:text-white transition-colors">Staff Queue</button>
-            <button onClick={() => handleQuickLogin('admin')} className="hover:text-white transition-colors">Admin Panel</button>
+            <a href="https://github.com/adit-syntax/ResolvAI" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
+              GitHub Repository <ExternalLink className="w-3 h-3 text-neutral-500" />
+            </a>
+            <div className="flex items-center gap-1.5 text-neutral-400">
+              <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+              <span>All Systems Operational</span>
+            </div>
           </div>
 
-          <p className="text-xs text-neutral-500">
-            © 2026 ResolvAI. All rights reserved.
+          <p className="text-neutral-500">
+            Built with FastAPI, React 18 &amp; Groq LLaMA 3.3
           </p>
-
         </div>
       </footer>
 
-      {/* ─── 9. DEMO OVERLAY MODAL ──────────────────────────────────────── */}
-      {showDemoOverlay && (
-        <DemoOverlayModal
-          initialScenario={initialOverlayScenario}
-          onClose={() => setShowDemoOverlay(false)}
-        />
-      )}
+      {/* ─── DOCUMENTATION MODAL ─── */}
+      <DocumentationModal isOpen={showDocsModal} onClose={() => setShowDocsModal(false)} />
 
-      {/* ─── 10. DOCUMENTATION MODAL ────────────────────────────────────── */}
-      <DocumentationModal
-        isOpen={showDocsModal}
-        onClose={() => setShowDocsModal(false)}
-      />
-
-      {/* ─── 10. AUTHENTICATION & REGISTRATION MODAL ─────────────────────── */}
+      {/* ─── AUTH MODAL ─── */}
       <AnimatePresence>
         {showLoginModal && (
-          <motion.div key="auth-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <motion.div key="auth-modal" initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sm:p-7 shadow-xl">
-            <button
-              onClick={() => setShowLoginModal(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* Header branding */}
-            <div className="text-center mb-5">
-              <ResolvAiLogo className="w-10 h-10 inline-block mb-2" />
-              <h3 className="text-lg font-bold text-white">Welcome to ResolvAI</h3>
-              <p className="text-xs text-neutral-400 mt-0.5">Sign in to your account</p>
-            </div>
-
-            {/* Auth Mode Tabs (Sign In vs Register) */}
-            <div className="flex bg-neutral-950 p-1 rounded-lg border border-neutral-800 mb-5">
-              <button
-                onClick={() => { setAuthTab('login'); setLoginError(''); }}
-                className={`relative flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors duration-200 z-10 ${authTab === 'login' ? 'text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
-              >
-                {authTab === 'login' && <motion.span layoutId="auth-tab-pill" className="absolute inset-0 rounded-md bg-[#22c55e]" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
-                <span className="relative z-10 flex items-center gap-1.5"><LogIn className="w-3.5 h-3.5" /> Sign In</span>
+          <motion.div key="auth-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div key="auth-modal" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sm:p-7 shadow-xl">
+              <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors">
+                <X className="w-5 h-5" />
               </button>
-              <button
-                onClick={() => { setAuthTab('register'); setRegError(''); }}
-                className={`relative flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors duration-200 z-10 ${authTab === 'register' ? 'text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
-              >
-                {authTab === 'register' && <motion.span layoutId="auth-tab-pill" className="absolute inset-0 rounded-md bg-[#22c55e]" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
-                <span className="relative z-10 flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" /> Create Account</span>
-              </button>
-            </div>
 
-            {/* Google OAuth Button */}
-            {googleClientId ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => { setGoogleError(''); googleLogin(); }}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors mb-3"
-                >
-                  <GoogleIcon className="w-4 h-4" />
-                  Continue with Google
-                </button>
-                {googleError && (
-                  <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3">
-                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                    <span>{googleError}</span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex items-start gap-2 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 mb-3">
-                <Info className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0 mt-0.5" />
-                <p className="text-[10px] text-neutral-400 leading-relaxed">
-                  Google sign-in enabled when <code className="bg-neutral-800 px-1 rounded text-neutral-300">VITE_GOOGLE_CLIENT_ID</code> is configured.
-                </p>
+              <div className="text-center mb-5">
+                <ResolvAiLogo className="w-10 h-10 inline-block mb-2" />
+                <h3 className="text-lg font-bold text-white">Sign In to ResolvAI</h3>
+                <p className="text-xs text-neutral-400 mt-0.5">Use direct demo profiles or enter your account credentials</p>
               </div>
-            )}
 
-            {/* Quick Demo Buttons */}
-            <div className="grid grid-cols-3 gap-2 mb-5">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('user')}
-                className="flex flex-col items-center gap-1 p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:border-neutral-700 hover:bg-neutral-800 transition-colors text-center"
-              >
-                <User className="w-4 h-4 text-[#22c55e]" />
-                <span className="text-[11px] font-semibold text-white">User</span>
-                <span className="text-[9px] text-neutral-500">Customer</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('employee')}
-                className="flex flex-col items-center gap-1 p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:border-neutral-700 hover:bg-neutral-800 transition-colors text-center"
-              >
-                <Headphones className="w-4 h-4 text-purple-400" />
-                <span className="text-[11px] font-semibold text-white">Employee</span>
-                <span className="text-[9px] text-neutral-500">Support Staff</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                className="flex flex-col items-center gap-1 p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:border-neutral-700 hover:bg-neutral-800 transition-colors text-center"
-              >
-                <ShieldCheck className="w-4 h-4 text-blue-400" />
-                <span className="text-[11px] font-semibold text-white">Admin</span>
-                <span className="text-[9px] text-neutral-500">Manager</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-neutral-800" />
-              <span className="text-[10px] text-neutral-500 uppercase tracking-wider">
-                {authTab === 'login' ? 'Or With Email' : 'Registration Details'}
-              </span>
-              <div className="flex-1 h-px bg-neutral-800" />
-            </div>
-
-            {/* TAB 1: SIGN IN FORM */}
-            {authTab === 'login' ? (
-              <form onSubmit={handleFormLogin} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="you@company.com"
-                    value={loginEmail}
-                    onChange={e => setLoginEmail(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1">Password</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={e => setLoginPassword(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                  />
-                </div>
-
-                {loginError && (
-                  <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-                    {loginError}
-                  </div>
-                )}
-
+              {/* Tab Selector */}
+              <div className="flex bg-neutral-950 p-1 rounded-lg border border-neutral-800 mb-5">
                 <button
-                  type="submit"
-                  disabled={loginLoading}
-                  className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2"
+                  onClick={() => { setAuthTab('login'); setLoginError(''); }}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${authTab === 'login' ? 'bg-[#22c55e] text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
                 >
-                  {loginLoading ? 'Signing in...' : 'Sign In'}
+                  <LogIn className="w-3.5 h-3.5" /> Sign In
                 </button>
-              </form>
-            ) : (
-              /* TAB 2: CREATE ACCOUNT FORM */
-              <form onSubmit={handleFormRegister} className="space-y-3">
-                <div className="flex items-start gap-2 bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2">
-                  <Info className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-neutral-400 leading-relaxed">
-                    Registers a <span className="text-white font-medium">Customer Support User</span> account.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="John Doe"
-                    value={regName}
-                    onChange={e => setRegName(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="john@example.com"
-                    value={regEmail}
-                    onChange={e => setRegEmail(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1">Password * (min 6 chars)</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                    value={regPassword}
-                    onChange={e => setRegPassword(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                  />
-                </div>
-
-                {regError && (
-                  <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-                    {regError}
-                  </div>
-                )}
-
                 <button
-                  type="submit"
-                  disabled={regLoading}
-                  className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2"
+                  onClick={() => { setAuthTab('register'); setRegError(''); }}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${authTab === 'register' ? 'bg-[#22c55e] text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
                 >
-                  {regLoading ? 'Creating Account...' : 'Create Account'}
+                  <UserPlus className="w-3.5 h-3.5" /> Create Account
                 </button>
-              </form>
-            )}
+              </div>
 
+              {/* Google OAuth button */}
+              {googleClientId ? (
+                <>
+                  <button type="button" onClick={() => { setGoogleError(''); googleLogin(); }} className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors mb-3">
+                    <GoogleIcon className="w-4 h-4" /> Continue with Google
+                  </button>
+                  {googleError && (
+                    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      <span>{googleError}</span>
+                    </div>
+                  )}
+                </>
+              ) : null}
+
+              {/* 1-Click Demo Profiles */}
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                <button type="button" onClick={() => handleQuickLogin('user')} className="p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 transition-colors text-center">
+                  <User className="w-4 h-4 text-[#22c55e] mx-auto mb-1" />
+                  <span className="text-[11px] font-semibold text-white block">Customer</span>
+                  <span className="text-[9px] text-neutral-500">Demo User</span>
+                </button>
+                <button type="button" onClick={() => handleQuickLogin('employee')} className="p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 transition-colors text-center">
+                  <Headphones className="w-4 h-4 text-purple-400 mx-auto mb-1" />
+                  <span className="text-[11px] font-semibold text-white block">Support</span>
+                  <span className="text-[9px] text-neutral-500">Staff Queue</span>
+                </button>
+                <button type="button" onClick={() => handleQuickLogin('admin')} className="p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 transition-colors text-center">
+                  <ShieldCheck className="w-4 h-4 text-blue-400 mx-auto mb-1" />
+                  <span className="text-[11px] font-semibold text-white block">Admin</span>
+                  <span className="text-[9px] text-neutral-500">Manager</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-neutral-800" />
+                <span className="text-[10px] text-neutral-500 uppercase tracking-wider">
+                  {authTab === 'login' ? 'Or With Credentials' : 'Registration Info'}
+                </span>
+                <div className="flex-1 h-px bg-neutral-800" />
+              </div>
+
+              {authTab === 'login' ? (
+                <form onSubmit={handleFormLogin} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1">Email</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="you@company.com"
+                      value={loginEmail}
+                      onChange={e => setLoginEmail(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1">Password</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={loginPassword}
+                      onChange={e => setLoginPassword(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
+                    />
+                  </div>
+                  {loginError && <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">{loginError}</div>}
+                  <button type="submit" disabled={loginLoading} className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2">
+                    {loginLoading ? 'Authenticating...' : 'Sign In'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleFormRegister} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Jane Doe"
+                      value={regName}
+                      onChange={e => setRegName(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="jane@company.com"
+                      value={regEmail}
+                      onChange={e => setRegEmail(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1">Password</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="••••••••"
+                      value={regPassword}
+                      onChange={e => setRegPassword(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
+                    />
+                  </div>
+                  {regError && <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">{regError}</div>}
+                  <button type="submit" disabled={regLoading} className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2">
+                    {regLoading ? 'Creating Account...' : 'Create Customer Account'}
+                  </button>
+                </form>
+              )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
