@@ -125,7 +125,24 @@ def _seed_demo_users(db):
         print(f"[Startup] Demo user seed warning: {e}")
 
 
-# ─── App Lifecycle ────────────────────────────────────────────────────────────
+from sqlalchemy import inspect as sa_inspect, text as sa_text
+
+def _ensure_schema_columns(eng):
+    """Safely ensure all expected columns exist if a previous migration partially ran."""
+    try:
+        with eng.connect() as conn:
+            inspector = sa_inspect(eng)
+            if "employees" in inspector.get_table_names():
+                cols = [c["name"] for c in inspector.get_columns("employees")]
+                if "skill_tags" not in cols:
+                    conn.execute(sa_text("ALTER TABLE employees ADD COLUMN skill_tags TEXT DEFAULT ''"))
+                if "avg_resolution_time" not in cols:
+                    conn.execute(sa_text("ALTER TABLE employees ADD COLUMN avg_resolution_time FLOAT DEFAULT 0.0"))
+                if "updated_at" not in cols:
+                    conn.execute(sa_text("ALTER TABLE employees ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                conn.commit()
+    except Exception as e:
+        print(f"[Schema Check] Notice: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -133,6 +150,7 @@ async def lifespan(app: FastAPI):
     # ('alembic upgrade head') owns the schema; create_all is idempotent
     # (checkfirst) so it's a no-op once migrations have run.
     Base.metadata.create_all(bind=engine)
+    _ensure_schema_columns(engine)
     print("[Startup] Database tables created / verified.")
 
     # Seed employee + user data
