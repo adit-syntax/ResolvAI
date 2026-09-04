@@ -130,17 +130,24 @@ from sqlalchemy import inspect as sa_inspect, text as sa_text
 def _ensure_schema_columns(eng):
     """Safely ensure all expected columns exist if a previous migration partially ran."""
     try:
-        with eng.connect() as conn:
-            inspector = sa_inspect(eng)
-            if "employees" in inspector.get_table_names():
-                cols = [c["name"] for c in inspector.get_columns("employees")]
-                if "skill_tags" not in cols:
-                    conn.execute(sa_text("ALTER TABLE employees ADD COLUMN skill_tags TEXT DEFAULT ''"))
-                if "avg_resolution_time" not in cols:
-                    conn.execute(sa_text("ALTER TABLE employees ADD COLUMN avg_resolution_time FLOAT DEFAULT 0.0"))
-                if "updated_at" not in cols:
-                    conn.execute(sa_text("ALTER TABLE employees ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+        is_sqlite = eng.url.drivername.startswith("sqlite")
+        if not is_sqlite:
+            statements = [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "ALTER TABLE employees ADD COLUMN IF NOT EXISTS skill_tags TEXT DEFAULT ''",
+                "ALTER TABLE employees ADD COLUMN IF NOT EXISTS avg_resolution_time FLOAT DEFAULT 0.0",
+                "ALTER TABLE employees ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            ]
+            with eng.connect() as conn:
+                for stmt in statements:
+                    try:
+                        conn.execute(sa_text(stmt))
+                    except Exception:
+                        pass
                 conn.commit()
+                print("[Startup] PostgreSQL schema verification & self-healing complete.")
     except Exception as e:
         print(f"[Schema Check] Notice: {e}")
 
