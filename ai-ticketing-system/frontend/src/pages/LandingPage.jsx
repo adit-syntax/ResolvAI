@@ -1,13 +1,16 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
 import DocumentationModal from '../components/DocumentationModal.jsx';
+import PrimaryButton from '../components/PrimaryButton.jsx';
+import SecondaryButton from '../components/SecondaryButton.jsx';
+import StatCard from '../components/StatCard.jsx';
+import HeroIllustration from '../components/HeroIllustration.jsx';
 import {
   ArrowRight, ShieldCheck, User, Bot, AlertTriangle,
-  MessageSquare, BarChart3, CheckCircle2,
-  Layers, Headphones, X, UserPlus, LogIn, Info,
-  Search, Users, BookOpen, ExternalLink, Activity
+  MessageSquare, CheckCircle2, Headphones,
+  X, UserPlus, LogIn, ExternalLink, Zap, Users
 } from 'lucide-react';
 import { authApi, setAuthToken } from '../api.js';
 
@@ -31,67 +34,34 @@ const DEMO_CREDENTIALS = {
 const LIVE_EXAMPLES = [
   {
     id: 'vpn',
-    tag: 'Access / IT',
-    title: 'VPN connection dropping after macOS update',
-    desc: 'Unable to connect to internal staging gateway via GlobalProtect after Sequoia 15.2 update.',
-    sop: 'KB-AUTH-101: SSO & VPN Troubleshooting Runbook',
-    outcome: 'Auto-Matched to SOP with config snippet & routed to IT queue.',
+    tag: 'IT Access',
+    title: 'VPN drops after macOS update',
+    desc: 'Unable to connect to staging gateway via GlobalProtect after Sequoia 15.2.',
+    sop: 'KB-AUTH-101: SSO & VPN Runbook',
+    outcome: 'Auto-matched SOP with config snippet → routed to IT queue.',
     confidence: '94%',
-    priority: 'Normal'
+    priority: 'Normal',
   },
   {
     id: 'outage',
-    tag: 'Infrastructure / DevOps',
-    title: '502 Bad Gateway on payments checkout endpoint',
-    desc: 'Multiple upstream pods reporting OOM restarts on checkout-service container.',
-    sop: 'KB-INFRA-202: API Gateway 502 & Outage Mitigation',
-    outcome: 'Triggered P1 incident alert & auto-assigned to on-call engineer.',
+    tag: 'Infrastructure',
+    title: '502 Bad Gateway on payments endpoint',
+    desc: 'Multiple pods OOM-restarting on checkout-service container.',
+    sop: 'KB-INFRA-202: API Gateway 502 Mitigation',
+    outcome: 'P1 incident triggered → auto-assigned to on-call engineer.',
     confidence: '98%',
-    priority: 'Critical'
+    priority: 'Critical',
   },
   {
     id: 'billing',
     tag: 'Finance',
     title: 'Duplicate charge on invoice #INV-2026-88',
-    desc: 'Corporate credit card billed twice for annual seats on March 1st cycle.',
-    sop: 'KB-FIN-404: Duplicate Payment & Refund Verification',
-    outcome: 'Auto-verified invoice status via tool & generated draft refund notice.',
+    desc: 'Corporate card billed twice for annual seats on March 1st cycle.',
+    sop: 'KB-FIN-404: Duplicate Payment & Refund',
+    outcome: 'Invoice verified via tool → draft refund notice generated.',
     confidence: '91%',
-    priority: 'Medium'
-  }
-];
-
-const ARCHITECTURE_PILLARS = [
-  {
-    icon: Bot,
-    title: 'Autonomous ReAct Agent Loop',
-    desc: 'Executes multi-step reasoning: evaluates issues, runs diagnostic tools (system health, user lookup, invoice check), and preserves auditable traces.'
+    priority: 'Medium',
   },
-  {
-    icon: Search,
-    title: 'Hybrid Vector RAG (384-D + BM25)',
-    desc: 'Combines dense cosine similarity with sparse BM25 token matching using Reciprocal Rank Fusion (RRF) for zero-hallucination SOP citations.'
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Zero-Leakage PII Guardrails',
-    desc: 'Sanitizes prompts before dispatching to LLMs. Validates credit cards using the Luhn algorithm and redacts API keys, tokens, and credentials.'
-  },
-  {
-    icon: Layers,
-    title: 'Semantic Duplicate & Outage Clustering',
-    desc: 'Computes vector embeddings to detect redundant tickets and clusters cascading incident spikes within rolling 60-minute time windows.'
-  },
-  {
-    icon: Users,
-    title: 'Workload-Balanced Routing',
-    desc: 'Dispatches unresolvable tickets to team members by evaluating department domain, skill tags, and live active ticket counts.'
-  },
-  {
-    icon: MessageSquare,
-    title: 'Real-Time WebSocket Bus',
-    desc: 'Instant ticket status broadcasts, SLA escalation sweeps, and interactive chat between customers and assigned support staff.'
-  }
 ];
 
 export default function LandingPage({ onLogin }) {
@@ -103,13 +73,11 @@ export default function LandingPage({ onLogin }) {
   const [activeTab, setActiveTab] = useState(0);
   const currentExample = LIVE_EXAMPLES[activeTab];
 
-  // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Register form state
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
@@ -138,7 +106,7 @@ export default function LandingPage({ onLogin }) {
         setGoogleError(err.message || 'Google sign-in failed.');
       }
     },
-    onError: () => setGoogleError('Google sign-in was cancelled or failed.'),
+    onError: () => setGoogleError('Google sign-in was cancelled.'),
     flow: 'implicit',
   });
 
@@ -150,7 +118,7 @@ export default function LandingPage({ onLogin }) {
       onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
       setShowLoginModal(false);
     } catch (err) {
-      setLoginError(err.message || 'Connection to backend failed. Please verify API is running.');
+      setLoginError(err.message || 'Backend offline — start the API server.');
     }
   };
 
@@ -164,7 +132,7 @@ export default function LandingPage({ onLogin }) {
       onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
       setShowLoginModal(false);
     } catch (err) {
-      setLoginError(err.message || 'Invalid email or password.');
+      setLoginError(err.message || 'Invalid credentials.');
     } finally {
       setLoginLoading(false);
     }
@@ -174,9 +142,8 @@ export default function LandingPage({ onLogin }) {
     e.preventDefault();
     setRegError('');
     if (regName.trim().length < 2) return setRegError('Please enter your full name.');
-    if (!regEmail.trim().includes('@')) return setRegError('Please enter a valid email.');
+    if (!regEmail.trim().includes('@')) return setRegError('Enter a valid email address.');
     if (regPassword.length < 6) return setRegError('Password must be at least 6 characters.');
-
     setRegLoading(true);
     try {
       const data = await authApi.register(regName.trim(), regEmail.trim().toLowerCase(), regPassword);
@@ -191,353 +158,182 @@ export default function LandingPage({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-neutral-100 font-sans selection:bg-[#22c55e] selection:text-black">
-      
-      {/* ─── NAVIGATION BAR ─── */}
-      <header className="sticky top-0 z-40 bg-[#09090b]/80 backdrop-blur-md border-b border-neutral-800/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <ResolvAiLogo className="w-7 h-7" />
-            <span className="text-base font-bold tracking-tight text-white">
-              Resolv<span className="text-[#22c55e]">AI</span>
-            </span>
+    <div className="min-h-screen bg-gradient-to-br from-[#0e0e2c] via-[#1e3a8a] to-[#0f172a] text-neutral-100 font-sans selection:bg-[#22c55e] selection:text-black">
+  {/* ─── NAV ─── */}
+  <header className="sticky top-0 z-40 bg-[#09090b]/80 backdrop-blur-md border-b border-neutral-800/80">
+    <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
+      <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+        <ResolvAiLogo className="w-7 h-7" />
+        <span className="font-bold text-[15px] text-white tracking-tight">Resolv<span className="text-[#22c55e]">AI</span></span>
+      </div>
+      <nav className="hidden md:flex items-center gap-6 text-[13px] text-neutral-400">
+        <a href="#demo" className="hover:text-white transition-colors">See it work</a>
+        <a href="#features" className="hover:text-white transition-colors">Features</a>
+        <button onClick={() => setShowDocsModal(true)} className="hover:text-white transition-colors">Docs</button>
+        <a href="https://github.com/adit-syntax/ResolvAI" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">GitHub <ExternalLink className="w-3 h-3 text-neutral-600" /></a>
+      </nav>
+      <div className="flex items-center gap-2">
+        <button id="header-sign-in-btn" onClick={() => { setAuthTab('login'); setShowLoginModal(true); }} className="px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 transition-colors">Sign In</button>
+        <button id="header-register-btn" onClick={() => { setAuthTab('register'); setShowLoginModal(true); }} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs hover:bg-[#1ea750] transition-colors">Create Account <ArrowRight className="w-3.5 h-3.5" /></button>
+      </div>
+    </div>
+  </header>
+
+  {/* ─── HERO SECTION ─── */}
+  <section className="relative pt-20 pb-16 px-4 sm:px-6 max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-8">
+    <div className="flex-1 text-center md:text-left">
+      <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/20 text-[11px] font-semibold text-[#22c55e] tracking-wide uppercase">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-70" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22c55e]" />
+        </span>
+        Open-Source AI Helpdesk &amp; Workload Balancing
+      </div>
+      <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-[1.15] mb-5">
+        Autonomous Incident Triage,<br className="hidden sm:inline" />
+        <span className="text-[#22c55e]">Grounded in Verified Runbooks.</span>
+      </h1>
+      <p className="max-w-2xl mx-auto md:mx-0 text-sm sm:text-base text-neutral-400 leading-relaxed mb-8">
+        ResolvAI categorizes incoming tickets, scrubs sensitive PII, grounds solutions against verified SOPs using hybrid vector search, and balances active workloads across your engineering staff.
+      </p>
+      <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-14">
+        <PrimaryButton onClick={() => handleQuickLogin('user')}><User className="w-4 h-4" /> Try as Customer</PrimaryButton>
+        <PrimaryButton className="bg-neutral-900 border border-neutral-800 text-neutral-200" onClick={() => handleQuickLogin('employee')}><Headphones className="w-4 h-4 text-purple-400" /> Try as Support Staff</PrimaryButton>
+        <PrimaryButton className="bg-neutral-900 border border-neutral-800 text-neutral-200" onClick={() => handleQuickLogin('admin')}><ShieldCheck className="w-4 h-4 text-blue-400" /> Try as Admin</PrimaryButton>
+      </div>
+    </div>
+    <div className="flex-1 flex justify-center">
+      <HeroIllustration />
+    </div>
+  </section>
+
+  {/* ─── STATS SECTION ─── */}
+  <section id="stats" className="py-12 px-4 sm:px-6 max-w-5xl mx-auto">
+    <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8">Powerful by the Numbers</h2>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <StatCard icon={Zap} title="Tickets Processed" value="12,345" description="Automated triage and routing" />
+      <StatCard icon={User} title="Active Users" value="542" description="Customers & support staff" />
+      <StatCard icon={ShieldCheck} title="Runbooks" value="128" description="Verified SOPs integrated" />
+    </div>
+  </section>
+
+  {/* ─── FEATURES ─── */}
+  <section id="features" className="py-16 px-4 sm:px-6 max-w-4xl mx-auto border-t border-neutral-800/50">
+    <div className="text-center mb-12">
+      <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">Built to actually work</h2>
+      <p className="text-sm text-neutral-500">No demo theatre. Every feature ships in production code you can read.</p>
+    </div>
+    <div className="grid sm:grid-cols-2 gap-5">
+      {[
+        { icon: Bot, color: 'text-[#22c55e]', title: 'AI triage in seconds', desc: 'The agent reads, categorizes, and routes every ticket. Common issues close without a human touchpoint.' },
+        { icon: ShieldCheck, color: 'text-blue-400', title: 'PII stripped before AI sees it', desc: 'Emails, card numbers, and API keys are redacted before hitting any LLM. Your data stays yours.' },
+        { icon: Zap, color: 'text-amber-400', title: 'Answers grounded in your runbooks', desc: 'Hybrid vector search surfaces the right SOP — no hallucinations, just citations you can verify.' },
+        { icon: Users, color: 'text-purple-400', title: 'Smart workload balancing', desc: 'Tickets route by skill and department based on who is actually free right now, not round-robin.' },
+      ].map(({ icon: Icon, color, title, desc }) => (
+        <div key={title} className="group p-5 rounded-xl border border-neutral-800/80 bg-neutral-900/30 hover:bg-neutral-900/60 hover:border-neutral-700 transition-all">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-4 bg-neutral-800/60 group-hover:bg-neutral-800 transition-colors">
+            <Icon className={`w-[18px] h-[18px] ${color}`} />
           </div>
+          <h3 className="text-white font-semibold text-[15px] mb-1.5">{title}</h3>
+          <p className="text-neutral-500 text-[13px] leading-relaxed">{desc}</p>
+        </div>
+      ))}
+    </div>
+  </section>
 
-          <nav className="hidden md:flex items-center gap-7 text-xs font-medium text-neutral-400">
-            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
-            <a href="#architecture" className="hover:text-white transition-colors">Core Architecture</a>
-            <button onClick={() => setShowDocsModal(true)} className="hover:text-white transition-colors flex items-center gap-1">
-              <BookOpen className="w-3.5 h-3.5 text-[#22c55e]" /> Documentation
-            </button>
-            <a href="https://github.com/adit-syntax/ResolvAI" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
-              GitHub <ExternalLink className="w-3 h-3 text-neutral-500" />
-            </a>
-          </nav>
+  {/* ─── CTA STRIP ─── */}
+  <section className="py-16 px-4 sm:px-6 border-t border-neutral-800/50">
+    <div className="max-w-2xl mx-auto text-center">
+      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Ready to stop drowning in tickets?</h2>
+      <p className="text-neutral-500 text-sm mb-8">Open-source, self-hostable, and free. Up and running in under a minute.</p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button onClick={() => { setAuthTab('register'); setShowLoginModal(true); }} className="px-7 py-3 rounded-xl bg-[#22c55e] text-black font-bold text-sm hover:bg-[#1ea750] transition-colors shadow-lg shadow-[#22c55e]/20 inline-flex items-center gap-2">Create free account <ArrowRight className="w-4 h-4" /></button>
+        <a href="https://github.com/adit-syntax/ResolvAI" target="_blank" rel="noopener noreferrer" className="px-7 py-3 rounded-xl border border-neutral-800 text-neutral-300 font-medium text-sm hover:border-neutral-700 hover:text-white transition-all inline-flex items-center gap-2">View on GitHub <ExternalLink className="w-3.5 h-3.5 text-neutral-500" /></a>
+      </div>
+    </div>
+  </section>
 
-          <div className="flex items-center gap-2.5">
-            <button
-              id="header-sign-in-btn"
-              onClick={() => { setAuthTab('login'); setShowLoginModal(true); }}
-              className="px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 transition-colors"
-            >
-              Sign In
-            </button>
-            <button
-              id="header-register-btn"
-              onClick={() => { setAuthTab('register'); setShowLoginModal(true); }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs hover:bg-[#1ea750] transition-colors"
-            >
-              Create Account <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+  {/* ─── FOOTER ─── */}
+  <footer className="border-t border-neutral-800/50 py-8 px-4 sm:px-6">
+    <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-600">
+      <div className="flex items-center gap-2">
+        <ResolvAiLogo className="w-5 h-5" /><span className="text-white font-semibold">ResolvAI</span><span>· Open-source AI helpdesk</span>
+      </div>
+      <div className="flex items-center gap-5">
+        <button onClick={() => setShowDocsModal(true)} className="hover:text-neutral-300 transition-colors">Docs</button>
+        <a href="https://github.com/adit-syntax/ResolvAI" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-300 transition-colors">GitHub</a>
+        <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />All systems operational</span>
+      </div>
+      <span>FastAPI · React 18 · Groq LLaMA 3.3</span>
+    </div>
+  </footer>
+
+  {/* ─── MODALS ─── */}
+  <DocumentationModal isOpen={showDocsModal} onClose={() => setShowDocsModal(false)} />
+  <AnimatePresence>
+    {showLoginModal && (
+      <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+        <motion.div key="modal" initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 10 }} transition={{ duration: 0.18 }} className="relative w-full max-w-[400px] bg-[#111113] border border-neutral-800 rounded-2xl shadow-2xl p-6">
+          {/* Close */}
+          <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors"><X className="w-4 h-4" /></button>
+          {/* Header */}
+          <div className="text-center mb-5">
+            <ResolvAiLogo className="w-9 h-9 mx-auto mb-2.5" />
+            <h3 className="text-[17px] font-bold text-white">{authTab === 'login' ? 'Welcome back' : 'Create your account'}</h3>
+            <p className="text-xs text-neutral-500 mt-0.5">{authTab === 'login' ? 'Or try a demo profile instantly' : 'Free to use · Open-source'}</p>
           </div>
-        </div>
-      </header>
-
-      {/* ─── HERO SECTION ─── */}
-      <section className="relative pt-20 pb-16 px-4 sm:px-6 max-w-4xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-400 mb-6">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-70" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22c55e]" />
-          </span>
-          <span>Open-Source AI Helpdesk &amp; Workload Balancing</span>
-        </div>
-
-        <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-[1.15] mb-5">
-          Autonomous Incident Triage, <br className="hidden sm:inline" />
-          <span className="text-[#22c55e]">Grounded in Verified Runbooks.</span>
-        </h1>
-
-        <p className="max-w-2xl mx-auto text-sm sm:text-base text-neutral-400 leading-relaxed mb-8">
-          ResolvAI categorizes incoming tickets, scrubs sensitive PII, grounds solutions against verified SOPs using hybrid vector search, and balances active workloads across your engineering staff.
-        </p>
-
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-14">
-          <button
-            onClick={() => handleQuickLogin('user')}
-            className="px-5 py-2.5 rounded-lg bg-[#22c55e] text-black font-semibold text-xs inline-flex items-center gap-2 hover:bg-[#1ea750] transition-colors"
-          >
-            <User className="w-4 h-4" /> Try as Customer
-          </button>
-          <button
-            onClick={() => handleQuickLogin('employee')}
-            className="px-5 py-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-200 font-semibold text-xs inline-flex items-center gap-2 hover:bg-neutral-800 transition-colors"
-          >
-            <Headphones className="w-4 h-4 text-purple-400" /> Try as Support Staff
-          </button>
-          <button
-            onClick={() => handleQuickLogin('admin')}
-            className="px-5 py-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-200 font-semibold text-xs inline-flex items-center gap-2 hover:bg-neutral-800 transition-colors"
-          >
-            <ShieldCheck className="w-4 h-4 text-blue-400" /> Try as Admin
-          </button>
-        </div>
-
-        {/* ─── REAL INTERACTIVE PIPELINE DEMO ─── */}
-        <div id="how-it-works" className="text-left rounded-2xl bg-neutral-950/80 border border-neutral-800 p-5 sm:p-6 shadow-2xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-neutral-800/80 gap-2">
-            <div>
-              <span className="text-xs font-semibold text-white tracking-wide block">How Tickets Are Evaluated in Real Time</span>
-              <span className="text-xs text-neutral-400">Select an issue to inspect automated categorization, PII filtering, and SOP retrieval.</span>
-            </div>
-            <span className="text-[11px] font-mono text-[#22c55e] bg-[#22c55e]/10 px-2.5 py-1 rounded border border-[#22c55e]/20 self-start sm:self-auto">
-              Pipeline: Active
-            </span>
+          {/* Tab toggle */}
+          <div className="flex bg-neutral-900 p-1 rounded-xl border border-neutral-800 mb-5">
+            <button onClick={() => { setAuthTab('login'); setLoginError(''); setGoogleError(''); }} className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${authTab === 'login' ? 'bg-[#22c55e] text-black' : 'text-neutral-500 hover:text-neutral-200'}`}> <LogIn className="w-3.5 h-3.5" /> Sign in</button>
+            <button onClick={() => { setAuthTab('register'); setRegError(''); setGoogleError(''); }} className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${authTab === 'register' ? 'bg-[#22c55e] text-black' : 'text-neutral-500 hover:text-neutral-200'}`}> <UserPlus className="w-3.5 h-3.5" /> Register</button>
           </div>
-
-          {/* Issue selector pills */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {LIVE_EXAMPLES.map((ex, i) => (
-              <button
-                key={ex.id}
-                onClick={() => setActiveTab(i)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                  activeTab === i
-                    ? 'bg-neutral-800 text-white border-neutral-600'
-                    : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-neutral-700'
-                }`}
-              >
-                {ex.tag}
+          {/* Google */}
+          {googleClientId && (
+            <>
+              <button type="button" onClick={() => { setGoogleError(''); googleLogin(); }} className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors mb-3"><GoogleIcon className="w-4 h-4" /> Continue with Google</button>
+              {googleError && (<div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />{googleError}</div>)}
+            </>
+          )}
+          {/* Quick demo profiles */}
+          <p className="text-[10px] text-neutral-600 uppercase tracking-wider text-center mb-2">Quick demo access</p>
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            {[{ type: 'user', label: 'Customer', sub: 'End user', icon: User, color: 'text-[#22c55e]' },{ type: 'employee', label: 'Support', sub: 'Staff queue', icon: Headphones, color: 'text-purple-400' },{ type: 'admin', label: 'Admin', sub: 'Full access', icon: ShieldCheck, color: 'text-blue-400' }].map(({ type, label, sub, icon: Icon, color }) => (
+              <button key={type} type="button" onClick={() => handleQuickLogin(type)} className="p-3 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 hover:border-neutral-700 transition-all text-center">
+                <Icon className={`w-4 h-4 ${color} mx-auto mb-1.5`} />
+                <span className="text-xs font-semibold text-white block">{label}</span>
+                <span className="text-[10px] text-neutral-600">{sub}</span>
               </button>
             ))}
           </div>
-
-          {/* Ticket inspection grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800/80 space-y-2.5">
-              <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">Incoming Customer Request</span>
-              <p className="text-xs font-semibold text-white">{currentExample.title}</p>
-              <p className="text-xs text-neutral-400 leading-relaxed font-mono">"{currentExample.desc}"</p>
-              <div className="pt-2 flex items-center gap-2">
-                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-neutral-300">
-                  Priority: {currentExample.priority}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-[#22c55e]">
-                  Confidence: {currentExample.confidence}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800/80 space-y-2.5 flex flex-col justify-between">
-              <div>
-                <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider block">Autonomous System Action</span>
-                <div className="text-xs font-semibold text-white mt-1 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />
-                  {currentExample.outcome}
-                </div>
-              </div>
-              <div className="pt-2 border-t border-neutral-800/80 text-[11px] text-neutral-500">
-                Grounded Document: <span className="text-neutral-300">{currentExample.sop}</span>
-              </div>
-            </div>
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-4"><div className="flex-1 h-px bg-neutral-800" />
+            <span className="text-[10px] text-neutral-600 uppercase tracking-wider">{authTab === 'login' ? 'or with email' : 'your info'}</span>
+            <div className="flex-1 h-px bg-neutral-800" />
           </div>
-        </div>
-      </section>
-
-      {/* ─── ARCHITECTURE SECTION ─── */}
-      <section id="architecture" className="py-16 px-4 sm:px-6 max-w-5xl mx-auto border-t border-neutral-800/80">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Production Engineering Architecture
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400 mt-2">
-            Built as a real, reliable microservice — no black boxes, no fake metrics, strictly auditable code.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-          {ARCHITECTURE_PILLARS.map((pillar) => {
-            const Icon = pillar.icon;
-            return (
-              <div key={pillar.title} className="bg-neutral-900/30 border border-neutral-800/90 p-5 rounded-xl space-y-2.5 hover:border-neutral-700 transition-colors">
-                <Icon className="w-5 h-5 text-[#22c55e] mb-1" />
-                <h3 className="text-sm font-semibold text-white">{pillar.title}</h3>
-                <p className="text-xs text-neutral-400 leading-relaxed">{pillar.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ─── CLEAN FOOTER ─── */}
-      <footer className="border-t border-neutral-800 bg-[#09090b] py-10 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-xs text-neutral-400">
-          <div className="flex items-center gap-2.5">
-            <ResolvAiLogo className="w-5 h-5" />
-            <span className="font-semibold text-white">ResolvAI</span>
-            <span className="text-neutral-500">· Open-Source AI Ticketing Platform</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <button onClick={() => setShowDocsModal(true)} className="hover:text-white transition-colors">
-              Documentation
-            </button>
-            <a href="https://github.com/adit-syntax/ResolvAI" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">
-              GitHub Repository <ExternalLink className="w-3 h-3 text-neutral-500" />
-            </a>
-            <div className="flex items-center gap-1.5 text-neutral-400">
-              <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
-              <span>All Systems Operational</span>
-            </div>
-          </div>
-
-          <p className="text-neutral-500">
-            Built with FastAPI, React 18 &amp; Groq LLaMA 3.3
-          </p>
-        </div>
-      </footer>
-
-      {/* ─── DOCUMENTATION MODAL ─── */}
-      <DocumentationModal isOpen={showDocsModal} onClose={() => setShowDocsModal(false)} />
-
-      {/* ─── AUTH MODAL ─── */}
-      <AnimatePresence>
-        {showLoginModal && (
-          <motion.div key="auth-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <motion.div key="auth-modal" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sm:p-7 shadow-xl">
-              <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors">
-                <X className="w-5 h-5" />
+          {/* Forms */}
+          {authTab === 'login' ? (
+            <form onSubmit={handleFormLogin} className="space-y-2.5">
+              <input type="email" required placeholder="you@company.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]/60 transition-colors" />
+              <input type="password" required placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]/60 transition-colors" />
+              {loginError && (<div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{loginError}</div>)}
+              <button type="submit" disabled={loginLoading} className="w-full py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#1ea750] text-black font-bold text-xs transition-colors disabled:opacity-60">{loginLoading ? 'Signing in…' : 'Sign in'}</button>
+            </form>
+          ) : (
+            <form onSubmit={handleFormRegister} className="space-y-2.5">
+              <input type="text" required placeholder="Full name" value={regName} onChange={e => setRegName(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]/60 transition-colors" />
+              <input type="email" required placeholder="you@company.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]/60 transition-colors" />
+              <input type="password" required minLength={6} placeholder="Choose a password" value={regPassword} onChange={e => setRegPassword(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]/60 transition-colors" />
+              {regError && (<div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{regError}</div>)}
+              <button type="submit" disabled={regLoading} className="w-full py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#1ea750] text-black font-bold text-xs transition-colors disabled:opacity-60">
+                {regLoading ? 'Creating account…' : 'Create account'}
               </button>
+            </form>
+          )}
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
 
-              <div className="text-center mb-5">
-                <ResolvAiLogo className="w-10 h-10 inline-block mb-2" />
-                <h3 className="text-lg font-bold text-white">Sign In to ResolvAI</h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Use direct demo profiles or enter your account credentials</p>
-              </div>
-
-              {/* Tab Selector */}
-              <div className="flex bg-neutral-950 p-1 rounded-lg border border-neutral-800 mb-5">
-                <button
-                  onClick={() => { setAuthTab('login'); setLoginError(''); }}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${authTab === 'login' ? 'bg-[#22c55e] text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
-                >
-                  <LogIn className="w-3.5 h-3.5" /> Sign In
-                </button>
-                <button
-                  onClick={() => { setAuthTab('register'); setRegError(''); }}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition-colors ${authTab === 'register' ? 'bg-[#22c55e] text-black font-bold' : 'text-neutral-400 hover:text-white'}`}
-                >
-                  <UserPlus className="w-3.5 h-3.5" /> Create Account
-                </button>
-              </div>
-
-              {/* Google OAuth button */}
-              {googleClientId ? (
-                <>
-                  <button type="button" onClick={() => { setGoogleError(''); googleLogin(); }} className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors mb-3">
-                    <GoogleIcon className="w-4 h-4" /> Continue with Google
-                  </button>
-                  {googleError && (
-                    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3">
-                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                      <span>{googleError}</span>
-                    </div>
-                  )}
-                </>
-              ) : null}
-
-              {/* 1-Click Demo Profiles */}
-              <div className="grid grid-cols-3 gap-2 mb-5">
-                <button type="button" onClick={() => handleQuickLogin('user')} className="p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 transition-colors text-center">
-                  <User className="w-4 h-4 text-[#22c55e] mx-auto mb-1" />
-                  <span className="text-[11px] font-semibold text-white block">Customer</span>
-                  <span className="text-[9px] text-neutral-500">Demo User</span>
-                </button>
-                <button type="button" onClick={() => handleQuickLogin('employee')} className="p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 transition-colors text-center">
-                  <Headphones className="w-4 h-4 text-purple-400 mx-auto mb-1" />
-                  <span className="text-[11px] font-semibold text-white block">Support</span>
-                  <span className="text-[9px] text-neutral-500">Staff Queue</span>
-                </button>
-                <button type="button" onClick={() => handleQuickLogin('admin')} className="p-2 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 transition-colors text-center">
-                  <ShieldCheck className="w-4 h-4 text-blue-400 mx-auto mb-1" />
-                  <span className="text-[11px] font-semibold text-white block">Admin</span>
-                  <span className="text-[9px] text-neutral-500">Manager</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-neutral-800" />
-                <span className="text-[10px] text-neutral-500 uppercase tracking-wider">
-                  {authTab === 'login' ? 'Or With Credentials' : 'Registration Info'}
-                </span>
-                <div className="flex-1 h-px bg-neutral-800" />
-              </div>
-
-              {authTab === 'login' ? (
-                <form onSubmit={handleFormLogin} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-400 mb-1">Email</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="you@company.com"
-                      value={loginEmail}
-                      onChange={e => setLoginEmail(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-400 mb-1">Password</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={loginPassword}
-                      onChange={e => setLoginPassword(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                    />
-                  </div>
-                  {loginError && <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">{loginError}</div>}
-                  <button type="submit" disabled={loginLoading} className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2">
-                    {loginLoading ? 'Authenticating...' : 'Sign In'}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleFormRegister} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-400 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Jane Doe"
-                      value={regName}
-                      onChange={e => setRegName(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-400 mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="jane@company.com"
-                      value={regEmail}
-                      onChange={e => setRegEmail(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-400 mb-1">Password</label>
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      placeholder="••••••••"
-                      value={regPassword}
-                      onChange={e => setRegPassword(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]"
-                    />
-                  </div>
-                  {regError && <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">{regError}</div>}
-                  <button type="submit" disabled={regLoading} className="w-full py-2 rounded-lg bg-[#22c55e] hover:bg-[#1ea750] text-black font-semibold text-xs transition-colors mt-2">
-                    {regLoading ? 'Creating Account...' : 'Create Customer Account'}
-                  </button>
-                </form>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

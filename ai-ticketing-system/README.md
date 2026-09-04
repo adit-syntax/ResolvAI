@@ -447,10 +447,14 @@ ai-ticketing-system/
 │       ├── api.js               # Centralized REST API client
 │       ├── index.css            # Custom CSS & glassmorphic design system
 │       ├── components/
+│       │   ├── ResolvAiLogo.jsx       # SVG Brand Logo
+│       │   ├── HeroIllustration.jsx   # Animated SVG mesh illustration
+│       │   ├── PrimaryButton.jsx      # Reusable primary button component
+│       │   ├── SecondaryButton.jsx    # Reusable secondary button component
+│       │   ├── StatCard.jsx           # Metric highlight card
+│       │   ├── DocumentationModal.jsx # Architecture & runbook documentation modal
 │       │   ├── SettingsModal.jsx      # Web UI Integrations & Settings modal
 │       │   ├── DemoOverlayModal.jsx   # Interactive AI processing demo overlay
-│       │   ├── LandingCarousel.jsx    # Hero feature carousel
-│       │   ├── ResolvAiLogo.jsx       # SVG Brand Logo
 │       │   └── TicketFlowGraph.jsx    # Interactive lifecycle graph
 │       └── pages/
 │           ├── LandingPage.jsx        # Public landing & feature showcase
