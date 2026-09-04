@@ -472,13 +472,23 @@ ai-ticketing-system/
 
 ## 🧪 Testing
 
-The backend includes automated tests covering authentication, RBAC, WebSocket dispatches, and the AI/RAG pipelines.
+The backend includes a comprehensive automated test suite covering authentication, RBAC authorization, PII guardrails, RAG, and WebSocket dispatches across 28 test cases.
 
 To run the suite:
 
 ```bash
 cd backend
-python -m pytest tests/ -q
+
+# Activate virtual environment (if using venv):
+# Windows:       .venv\Scripts\activate
+# Linux / macOS: source .venv/bin/activate
+
+# Run test suite:
+pytest tests/ -v
+```
+
+```
+============================= 28 passed in 1.60s ==============================
 ```
 
 ---

@@ -415,17 +415,30 @@ ai-QUERY/
 
 ## 🧪 Testing
 
-The backend includes a comprehensive automated test suite covering authentication, RBAC authorization, PII guardrails, RAG, and WebSocket dispatches.
+The backend includes a comprehensive automated test suite covering authentication, RBAC authorization, PII guardrails, RAG, and WebSocket dispatches across 28 test cases.
 
 To run tests:
 
 ```bash
 cd ai-ticketing-system/backend
+
+# Activate virtual environment (if using venv):
+# Windows:       .venv\Scripts\activate
+# Linux / macOS: source .venv/bin/activate
+
+# Run test suite:
 pytest tests/ -v
 ```
 
 ```
-============================= 28 passed in 3.28s ==============================
+tests/test_auth_api.py ......................... [ 17%]
+tests/test_employee_dashboard.py ............... [ 28%]
+tests/test_genai_suite.py ...................... [ 53%]
+tests/test_rbac_security.py .................... [ 71%]
+tests/test_realtime.py ......................... [ 82%]
+tests/test_tickets_api.py ...................... [100%]
+
+============================= 28 passed in 1.60s ==============================
 ```
 
 ---
