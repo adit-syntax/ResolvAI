@@ -39,6 +39,44 @@ function GoogleIcon({ className = 'w-4 h-4' }) {
   );
 }
 
+// Google Login Button component (only mounted when clientId exists)
+function GoogleOAuthButton({ onSuccess, onError }) {
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (codeResponse) => {
+      try {
+        const res  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${codeResponse.access_token}` },
+        });
+        const info = await res.json();
+        const googleEmail = (info.email || '').toLowerCase();
+        const googleName  = info.name || googleEmail.split('@')[0];
+        const data = await authApi.googleAuth({
+          email: googleEmail,
+          name: googleName,
+          access_token: codeResponse?.access_token,
+        });
+        setAuthToken(data.access_token);
+        onSuccess({ role: data.role, email: data.email, name: data.name }, data.access_token);
+      } catch (err) {
+        onError(err.message || 'Google sign-in failed. Please try again.');
+      }
+    },
+    onError: () => onError('Google sign-in was cancelled or failed.'),
+    flow: 'implicit',
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => { onError(''); googleLogin(); }}
+      className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-semibold text-sm transition-all shadow-md active:scale-[0.98] mb-4"
+    >
+      <GoogleIcon className="w-4 h-4" />
+      Continue with Google
+    </button>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function LoginPage({ onLogin }) {
@@ -61,39 +99,6 @@ export default function LoginPage({ onLogin }) {
 
   // Google OAuth
   const [googleError, setGoogleError]   = useState('');
-
-  const handleGoogleSuccess = async (info, codeResponse) => {
-    setGoogleError('');
-    const googleEmail = (info.email || '').toLowerCase();
-    const googleName  = info.name || googleEmail.split('@')[0];
-    try {
-      const data = await authApi.googleAuth({
-        email: googleEmail,
-        name: googleName,
-        access_token: codeResponse?.access_token,
-      });
-      setAuthToken(data.access_token);
-      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
-    } catch (err) {
-      setGoogleError(err.message || 'Google sign-in failed on server verification.');
-    }
-  };
-
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (codeResponse) => {
-      try {
-        const res  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${codeResponse.access_token}` },
-        });
-        const info = await res.json();
-        await handleGoogleSuccess(info, codeResponse);
-      } catch {
-        setGoogleError('Google sign-in failed. Please try again.');
-      }
-    },
-    onError: () => setGoogleError('Google sign-in was cancelled or failed.'),
-    flow: 'implicit',
-  });
 
   // ── Sign In ──────────────────────────────────────────────────────────────────
 
@@ -201,14 +206,10 @@ export default function LoginPage({ onLogin }) {
           {/* Google OAuth Button */}
           {googleClientId ? (
             <>
-              <button
-                type="button"
-                onClick={() => { setGoogleError(''); googleLogin(); }}
-                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-semibold text-sm transition-all shadow-md active:scale-[0.98] mb-4"
-              >
-                <GoogleIcon className="w-4 h-4" />
-                Continue with Google
-              </button>
+              <GoogleOAuthButton
+                onSuccess={onLogin}
+                onError={setGoogleError}
+              />
               {googleError && (
                 <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 text-red-400 text-xs mb-3">
                   <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />{googleError}

@@ -64,6 +64,42 @@ const LIVE_EXAMPLES = [
   },
 ];
 
+function GoogleOAuthButton({ onSuccess, onError }) {
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (codeResponse) => {
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${codeResponse.access_token}` },
+        });
+        const info = await res.json();
+        const googleEmail = (info.email || '').toLowerCase();
+        const googleName  = info.name || googleEmail.split('@')[0];
+        const data = await authApi.googleAuth({
+          email: googleEmail,
+          name: googleName,
+          access_token: codeResponse?.access_token,
+        });
+        setAuthToken(data.access_token);
+        onSuccess({ role: data.role, email: data.email, name: data.name }, data.access_token);
+      } catch (err) {
+        onError(err.message || 'Google sign-in failed.');
+      }
+    },
+    onError: () => onError('Google sign-in was cancelled.'),
+    flow: 'implicit',
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => { onError(''); googleLogin(); }}
+      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors mb-3"
+    >
+      <GoogleIcon className="w-4 h-4" /> Continue with Google
+    </button>
+  );
+}
+
 export default function LandingPage({ onLogin }) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [authTab, setAuthTab] = useState('login');
@@ -84,31 +120,6 @@ export default function LandingPage({ onLogin }) {
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
-
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (codeResponse) => {
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${codeResponse.access_token}` },
-        });
-        const info = await res.json();
-        const googleEmail = (info.email || '').toLowerCase();
-        const googleName  = info.name || googleEmail.split('@')[0];
-        const data = await authApi.googleAuth({
-          email: googleEmail,
-          name: googleName,
-          access_token: codeResponse?.access_token,
-        });
-        setAuthToken(data.access_token);
-        onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
-        setShowLoginModal(false);
-      } catch (err) {
-        setGoogleError(err.message || 'Google sign-in failed.');
-      }
-    },
-    onError: () => setGoogleError('Google sign-in was cancelled.'),
-    flow: 'implicit',
-  });
 
   const handleQuickLogin = async (type) => {
     const cred = DEMO_CREDENTIALS[type];
@@ -290,7 +301,13 @@ export default function LandingPage({ onLogin }) {
           {/* Google */}
           {googleClientId && (
             <>
-              <button type="button" onClick={() => { setGoogleError(''); googleLogin(); }} className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors mb-3"><GoogleIcon className="w-4 h-4" /> Continue with Google</button>
+              <GoogleOAuthButton
+                onSuccess={(profile, token) => {
+                  onLogin(profile, token);
+                  setShowLoginModal(false);
+                }}
+                onError={setGoogleError}
+              />
               {googleError && (<div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />{googleError}</div>)}
             </>
           )}

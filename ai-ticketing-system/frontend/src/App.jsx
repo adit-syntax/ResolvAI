@@ -266,48 +266,56 @@ export default function App() {
     if (auth) setAuth({ ...auth, email: newEmail });
   };
 
-  return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <Router>
-        {!auth ? (
-          <LandingPage onLogin={handleLogin} />
-        ) : (
-          <Layout role={auth.role} email={auth.email} onLogout={handleLogout}>
-            <Routes>
-              {auth.role === 'admin' ? (
-                /* ── Admin routes ── */
-                <>
-                  <Route path="/tickets" element={<TicketList />} />
-                  <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
-                  <Route path="/employees" element={<EmployeeDirectory />} />
-                  <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
-                  <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="*" element={<Navigate to="/tickets" replace />} />
-                </>
-              ) : auth.role === 'employee' ? (
-                /* ── Employee routes ── */
-                <>
-                  <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
-                  <Route path="/tickets" element={<TicketList />} />
-                  <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
-                  <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="*" element={<Navigate to="/employee-dashboard" replace />} />
-                </>
-              ) : (
-                /* ── User routes ── */
-                <>
-                  <Route path="/" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
-                  <Route path="/my-tickets" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
-                  <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </>
-              )}
-            </Routes>
-          </Layout>
-        )}
-      </Router>
-    </GoogleOAuthProvider>
+  const appContent = (
+    <Router>
+      {!auth ? (
+        <LandingPage onLogin={handleLogin} />
+      ) : (
+        <Layout role={auth.role} email={auth.email} onLogout={handleLogout}>
+          <Routes>
+            {auth.role === 'admin' ? (
+              /* ── Admin routes ── */
+              <>
+                <Route path="/tickets" element={<TicketList />} />
+                <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
+                <Route path="/employees" element={<EmployeeDirectory />} />
+                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
+                <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="*" element={<Navigate to="/tickets" replace />} />
+              </>
+            ) : auth.role === 'employee' ? (
+              /* ── Employee routes ── */
+              <>
+                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
+                <Route path="/tickets" element={<TicketList />} />
+                <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
+                <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="*" element={<Navigate to="/employee-dashboard" replace />} />
+              </>
+            ) : (
+              /* ── User routes ── */
+              <>
+                <Route path="/" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
+                <Route path="/my-tickets" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
+                <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </>
+            )}
+          </Routes>
+        </Layout>
+      )}
+    </Router>
   );
+
+  if (googleClientId) {
+    return (
+      <GoogleOAuthProvider clientId={googleClientId}>
+        {appContent}
+      </GoogleOAuthProvider>
+    );
+  }
+
+  return appContent;
 }
