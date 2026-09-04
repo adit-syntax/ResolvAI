@@ -8,22 +8,22 @@ services:
     startCommand: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
-      # REQUIRED: Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+      # Auto-generate a secure random 32-byte secret key on Render
       - key: SECRET_KEY
-        sync: false          # Set manually in Render dashboard
+        generateValue: true
 
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "1440"        # 24 hours
 
       - key: GROQ_API_KEY
-        sync: false          # Set manually in Render dashboard
+        sync: false          # Optional: can also be set via Web UI
 
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
 
-      # Enables Google sign-in; must match the frontend VITE_GOOGLE_CLIENT_ID
-      - key: GOOGLE_CLIENT_ID
-        sync: false
+      # Seed demo user accounts on initial startup so reviewers can log in
+      - key: SEED_DEMO_USERS
+        value: "true"
 
       # PostgreSQL connection string from managed database
       - key: DATABASE_URL
@@ -31,9 +31,9 @@ services:
           name: ai-ticketing-db
           property: connectionString
 
-      # Allow only the frontend origin — set in Render dashboard
+      # CORS origin allow-list
       - key: ALLOWED_ORIGINS
-        sync: false          # Set to your frontend URL e.g. https://ai-ticketing-frontend.onrender.com
+        value: "*"
 
       - key: ENVIRONMENT
         value: production
