@@ -127,7 +127,7 @@ function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
           >
             <ResolvAiLogo
               variant="icon"
-              className="w-9 h-9 flex-shrink-0 drop-shadow-[0_0_10px_rgba(34,197,94,0.3)] rounded-xl group-hover:scale-105 transition-transform"
+              className="w-9 h-9 flex-shrink-0 rounded-xl group-hover:scale-105 transition-transform"
             />
             <div>
               <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight group-hover:text-[#22c55e] transition-colors">

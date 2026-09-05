@@ -175,7 +175,7 @@ export default function LoginPage({ onLogin }) {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <ResolvAiLogo variant="icon" className="w-16 h-16 mb-4 drop-shadow-[0_0_25px_rgba(34,197,94,0.35)] rounded-2xl inline-block" />
+          <ResolvAiLogo variant="icon" className="w-16 h-16 mb-4 rounded-2xl inline-block" />
           <h1 className="text-3xl font-black tracking-tight text-white mb-1">Resolv<span className="text-[#22c55e]">AI</span></h1>
           <p className="text-neutral-400 text-sm font-medium">Smart AI Helpdesk &amp; Autonomous Triage</p>
         </div>

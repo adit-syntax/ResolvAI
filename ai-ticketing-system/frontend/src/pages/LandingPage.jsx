@@ -289,7 +289,7 @@ export default function LandingPage({ onLogin }) {
           <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors"><X className="w-4 h-4" /></button>
           {/* Header */}
           <div className="text-center mb-5">
-            <ResolvAiLogo variant="icon" className="w-12 h-12 mx-auto mb-2.5 shadow-lg rounded-2xl" />
+            <ResolvAiLogo variant="icon" className="w-12 h-12 mx-auto mb-2.5 rounded-2xl" />
             <h3 className="text-[17px] font-bold text-white">{authTab === 'login' ? 'Welcome back' : 'Create your account'}</h3>
             <p className="text-xs text-neutral-500 mt-0.5">{authTab === 'login' ? 'Or try a demo profile instantly' : 'Free to use · Open-source'}</p>
           </div>
