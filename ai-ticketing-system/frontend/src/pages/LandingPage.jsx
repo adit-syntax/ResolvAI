@@ -299,7 +299,7 @@ export default function LandingPage({ onLogin }) {
             <button onClick={() => { setAuthTab('register'); setRegError(''); setGoogleError(''); }} className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${authTab === 'register' ? 'bg-[#22c55e] text-black' : 'text-neutral-500 hover:text-neutral-200'}`}> <UserPlus className="w-3.5 h-3.5" /> Register</button>
           </div>
           {/* Google */}
-          {googleClientId && (
+          {googleClientId ? (
             <>
               <GoogleOAuthButton
                 onSuccess={(profile, token) => {
@@ -308,9 +308,39 @@ export default function LandingPage({ onLogin }) {
                 }}
                 onError={setGoogleError}
               />
-              {googleError && (<div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />{googleError}</div>)}
+              {googleError && (
+                <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>{googleError}</span>
+                </div>
+              )}
             </>
+          ) : (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setGoogleError(
+                    'Google OAuth requires VITE_GOOGLE_CLIENT_ID. Set it in your Render environment variables or .env file.'
+                  )
+                }
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs transition-colors shadow-sm"
+                id="google-signin-btn"
+              >
+                <GoogleIcon className="w-4 h-4" />
+                <span>Continue with Google</span>
+              </button>
+              {googleError && (
+                <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-amber-300 text-xs mt-2">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 text-[11px] leading-relaxed">
+                    <span>{googleError}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
+
           {/* Quick demo profiles */}
           <p className="text-[10px] text-neutral-600 uppercase tracking-wider text-center mb-2">Quick demo access</p>
           <div className="grid grid-cols-3 gap-2 mb-5">
