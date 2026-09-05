@@ -10,8 +10,16 @@
 
 let BASE_URL = '/api';
 if (import.meta.env.VITE_API_URL) {
-  const apiUrl = import.meta.env.VITE_API_URL;
+  let apiUrl = import.meta.env.VITE_API_URL.trim();
+  apiUrl = apiUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+  // If Render injected only internal service hostname without domain (e.g. 'ai-ticketing-backend-cb04')
+  if (!apiUrl.includes('.') && !apiUrl.startsWith('http')) {
+    apiUrl = `${apiUrl}.onrender.com`;
+  }
   BASE_URL = apiUrl.startsWith('http') ? `${apiUrl}/api` : `https://${apiUrl}/api`;
+} else if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+  // Production fallback on Render if env var was omitted at build time
+  BASE_URL = 'https://ai-ticketing-backend-cb04.onrender.com/api';
 }
 
 // ─── Auth Token Management ────────────────────────────────────────────────────
@@ -61,7 +69,15 @@ async function request(url, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${BASE_URL}${url}`, { ...options, headers });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${url}`, { ...options, headers });
+  } catch (netErr) {
+    console.error('Fetch network error:', netErr);
+    throw new Error(
+      'Unable to connect to the backend server. If using Render free tier, the backend may be waking up from sleep — please wait a moment and try again.'
+    );
+  }
 
   // Token expired or invalid — log out and reload
   if (response.status === 401) {
