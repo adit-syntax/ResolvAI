@@ -131,7 +131,7 @@ function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
             />
             <div>
               <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight group-hover:text-[#22c55e] transition-colors">
-                Resolv<span className="text-[#22c55e]">AI</span>
+                Resolv<span className="text-[#22c55e] group-hover:text-white transition-colors">AI</span>
               </h1>
               <p className="text-[11px] text-neutral-400 font-medium leading-tight">
                 Smart AI Helpdesk
@@ -223,7 +223,7 @@ function Layout({ children, role, email, onLogout }) {
           >
             <ResolvAiLogo variant="icon" className="w-7 h-7 rounded-lg group-hover:scale-105 transition-transform" />
             <span className="text-sm font-bold text-white group-hover:text-[#22c55e] transition-colors">
-              Resolv<span className="text-[#22c55e]">AI</span>
+              Resolv<span className="text-[#22c55e] group-hover:text-white transition-colors">AI</span>
             </span>
           </Link>
         </div>
