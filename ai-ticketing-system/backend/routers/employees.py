@@ -95,6 +95,7 @@ def get_active_tickets(db: Session = Depends(get_db), current_user=Depends(requi
 
 @router.get("/me/dashboard")
 def get_my_employee_dashboard(
+    employee_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user=Depends(require_employee_or_admin),
 ):
@@ -107,7 +108,10 @@ def get_my_employee_dashboard(
     - Department queue for peer collaboration & suggestions
     """
     emp = None
-    if current_user.employee_id:
+    if employee_id and current_user.role == "admin":
+        emp = db.get(Employee, employee_id)
+
+    if not emp and current_user.employee_id:
         emp = db.get(Employee, current_user.employee_id)
     if not emp:
         emp = db.query(Employee).filter(Employee.email.ilike(current_user.email)).first()
@@ -198,7 +202,18 @@ def get_my_employee_dashboard(
     total_evaluated = total_count
     sla_compliance_rate = round(((total_evaluated - breached_count) / total_evaluated * 100), 1) if total_evaluated > 0 else 100.0
 
+    all_employees = []
+    if current_user.role == "admin":
+        all_employees = [
+            {"id": e.id, "name": e.name, "email": e.email, "department": e.department, "role": e.role}
+            for e in db.query(Employee).filter(Employee.is_active == True).order_by(Employee.name).all()
+        ]
+
     return {
+        "viewer_role": current_user.role,
+        "viewer_name": current_user.name,
+        "viewer_email": current_user.email,
+        "all_employees": all_employees,
         "employee": EmployeeResponse.model_validate(emp).model_dump() if emp else None,
         "metrics": {
             "total_assigned": total_count,

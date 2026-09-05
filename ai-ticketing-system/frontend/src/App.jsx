@@ -305,7 +305,7 @@ export default function App() {
                 <Route path="/tickets" element={<TicketList />} />
                 <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
                 <Route path="/employees" element={<EmployeeDirectory />} />
-                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
+                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} currentUser={auth} />} />
                 <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="*" element={<Navigate to="/tickets" replace />} />
@@ -313,7 +313,7 @@ export default function App() {
             ) : auth.role === 'employee' ? (
               /* ── Employee routes ── */
               <>
-                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} />} />
+                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} currentUser={auth} />} />
                 <Route path="/tickets" element={<TicketList />} />
                 <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
                 <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />

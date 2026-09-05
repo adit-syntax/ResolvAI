@@ -88,8 +88,12 @@ function SlaBadge({ slaStatus, dueAt }) {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────
-export default function EmployeeDashboard({ userEmail }) {
+export default function EmployeeDashboard({ userEmail, currentUser }) {
   const navigate = useNavigate();
+
+  const role = currentUser?.role || (userEmail?.toLowerCase().includes('admin') ? 'admin' : 'employee');
+  const userName = currentUser?.name || (role === 'admin' ? 'Administrator' : '');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -112,12 +116,13 @@ export default function EmployeeDashboard({ userEmail }) {
   const [replySuccess, setReplySuccess] = useState('');
 
   // Fetch dashboard data
-  const loadDashboard = useCallback(async (isSilent = false) => {
+  const loadDashboard = useCallback(async (isSilent = false, empId = null) => {
     if (!isSilent) setRefreshing(true);
     setError('');
     try {
-      const data = await employeeApi.getDashboard();
+      const data = await employeeApi.getDashboard(empId);
       setDashboardData(data);
+      if (empId) setSelectedEmployeeId(empId);
       setLastRefreshed(new Date());
     } catch (err) {
       console.error('Failed to load employee dashboard:', err);
@@ -127,6 +132,11 @@ export default function EmployeeDashboard({ userEmail }) {
       setRefreshing(false);
     }
   }, []);
+
+  const handleSwitchEmployee = (empId) => {
+    setSelectedEmployeeId(empId);
+    loadDashboard(false, empId);
+  };
 
   useEffect(() => {
     loadDashboard();
@@ -200,6 +210,7 @@ export default function EmployeeDashboard({ userEmail }) {
   };
 
   const employee = dashboardData?.employee;
+  const allEmployees = dashboardData?.all_employees || [];
   const metrics = dashboardData?.metrics || {};
   const liveTickets = dashboardData?.live_tickets || [];
   const pastTickets = dashboardData?.past_tickets || [];
@@ -265,24 +276,45 @@ export default function EmployeeDashboard({ userEmail }) {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-base shadow-inner">
-                {employee?.name ? employee.name.charAt(0).toUpperCase() : 'E'}
+            {role === 'admin' ? (
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-base shadow-inner">
+                  <ShieldCheck className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                    Welcome back, {userName || 'Administrator'}
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> System Administrator
+                    </span>
+                  </h1>
+                  <p className="text-xs text-neutral-400 flex items-center gap-2 mt-0.5">
+                    <span className="text-blue-300/90 font-medium">Staff Workspace Oversight</span>
+                    <span className="w-1 h-1 rounded-full bg-neutral-600" />
+                    <span className="text-neutral-500">{userEmail}</span>
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-                  Welcome back, {employee?.name || 'Support Specialist'}
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-medium">
-                    {employee?.role || 'Staff Agent'}
-                  </span>
-                </h1>
-                <p className="text-xs text-neutral-400 flex items-center gap-2 mt-0.5">
-                  <span>{employee?.department || 'Support'} Department</span>
-                  <span className="w-1 h-1 rounded-full bg-neutral-600" />
-                  <span className="text-neutral-500">{employee?.email || userEmail}</span>
-                </p>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-base shadow-inner">
+                  {employee?.name ? employee.name.charAt(0).toUpperCase() : 'E'}
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                    Welcome back, {employee?.name || 'Support Specialist'}
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-medium">
+                      {employee?.role || 'Staff Agent'}
+                    </span>
+                  </h1>
+                  <p className="text-xs text-neutral-400 flex items-center gap-2 mt-0.5">
+                    <span>{employee?.department || 'Support'} Department</span>
+                    <span className="w-1 h-1 rounded-full bg-neutral-600" />
+                    <span className="text-neutral-500">{employee?.email || userEmail}</span>
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Actions: Availability Switcher & Refresh */}
@@ -356,6 +388,38 @@ export default function EmployeeDashboard({ userEmail }) {
             </button>
           </div>
         </div>
+
+        {/* Admin Oversight Switcher Bar */}
+        {role === 'admin' && (
+          <div className="relative z-10 mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02] -mx-6 md:-mx-8 -mb-6 md:-mb-8 px-6 md:px-8 py-3.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-xs font-semibold text-neutral-300 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-blue-400" /> Inspecting Staff Workspace:
+              </span>
+              {allEmployees.length > 0 ? (
+                <select
+                  value={selectedEmployeeId || employee?.id || ''}
+                  onChange={(e) => handleSwitchEmployee(Number(e.target.value))}
+                  className="bg-[#1a1a1a] border border-neutral-700 hover:border-blue-500/60 rounded-lg px-3 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                >
+                  {allEmployees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} — {emp.role} ({emp.department})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs text-neutral-300 font-medium">
+                  {employee?.name} ({employee?.department})
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-blue-300/80 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+              <span>Showing live tickets &amp; SLA performance for <strong>{employee?.name || 'staff'}</strong></span>
+            </div>
+          </div>
+        )}
 
         {/* SLA Urgency Notice */}
         {urgentCount > 0 && (
