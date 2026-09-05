@@ -239,6 +239,7 @@ def get_my_employee_dashboard(
 @router.patch("/me/availability")
 def update_my_availability(
     data: EmployeeAvailabilityUpdate,
+    employee_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user=Depends(require_employee_or_admin),
 ):
@@ -248,7 +249,9 @@ def update_my_availability(
         raise HTTPException(status_code=400, detail=f"Availability must be one of: {', '.join(valid_statuses)}")
 
     emp = None
-    if current_user.employee_id:
+    if employee_id and current_user.role == "admin":
+        emp = db.get(Employee, employee_id)
+    if not emp and current_user.employee_id:
         emp = db.get(Employee, current_user.employee_id)
     if not emp:
         emp = db.query(Employee).filter(Employee.email.ilike(current_user.email)).first()

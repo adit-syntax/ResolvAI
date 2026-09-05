@@ -161,8 +161,11 @@ export const employeeApi = {
   },
   getDashboard: (employeeId) =>
     request(employeeId ? `/employees/me/dashboard?employee_id=${employeeId}` : '/employees/me/dashboard'),
-  updateMyAvailability: (availability) =>
-    request('/employees/me/availability', { method: 'PATCH', body: JSON.stringify({ availability }) }),
+  updateMyAvailability: (availability, employeeId) =>
+    request(
+      employeeId ? `/employees/me/availability?employee_id=${employeeId}` : '/employees/me/availability',
+      { method: 'PATCH', body: JSON.stringify({ availability }) }
+    ),
   get: (id) => request(`/employees/${id}`),
   create: (data) => request('/employees/', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

@@ -152,7 +152,10 @@ export default function EmployeeDashboard({ userEmail, currentUser }) {
     setAvailabilityUpdating(true);
     setShowAvailabilityMenu(false);
     try {
-      await employeeApi.updateMyAvailability(newStatus);
+      const targetEmpId = (role === 'admin' && (selectedEmployeeId || dashboardData?.employee?.id))
+        ? (selectedEmployeeId || dashboardData?.employee?.id)
+        : null;
+      await employeeApi.updateMyAvailability(newStatus, targetEmpId);
       if (dashboardData?.employee) {
         setDashboardData(prev => ({
           ...prev,
@@ -269,12 +272,14 @@ export default function EmployeeDashboard({ userEmail, currentUser }) {
   return (
     <div className="space-y-7 pb-16 animate-fadeIn">
       {/* ─── Hero / Header Workspace Banner ────────────────────────────── */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-[#181818] via-[#121212] to-[#0d0d0d] border border-white/10 p-6 md:p-8 shadow-2xl overflow-hidden">
-        {/* Glow backdrop accents */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#22c55e]/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative rounded-2xl bg-gradient-to-br from-[#181818] via-[#121212] to-[#0d0d0d] border border-white/10 p-6 md:p-8 shadow-2xl">
+        {/* Glow backdrop accents contained safely without clipping popups */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#22c55e]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl" />
+        </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="relative z-30 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             {role === 'admin' ? (
               <div className="flex items-center gap-3">
@@ -347,32 +352,60 @@ export default function EmployeeDashboard({ userEmail, currentUser }) {
               </button>
 
               {showAvailabilityMenu && (
-                <div className="absolute right-0 mt-2 w-48 rounded-xl bg-[#1a1a1a] border border-[#333] shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
-                  <p className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-                    Set Workload Status
-                  </p>
-                  <button
-                    onClick={() => handleUpdateAvailability('Available')}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    Available (Accepting)
-                  </button>
-                  <button
-                    onClick={() => handleUpdateAvailability('Busy')}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-amber-500/10 hover:text-amber-400 transition-colors"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    Busy (In Deep Work)
-                  </button>
-                  <button
-                    onClick={() => handleUpdateAvailability('On Leave')}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-red-400" />
-                    On Leave (Auto-Route Away)
-                  </button>
-                </div>
+                <>
+                  {/* Backdrop to dismiss dropdown on click outside */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowAvailabilityMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#1c1c1c] border border-neutral-700 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
+                    <p className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 border-b border-neutral-800 mb-1">
+                      Set Workload Status
+                    </p>
+                    <button
+                      onClick={() => handleUpdateAvailability('Available')}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        employee?.availability === 'Available'
+                          ? 'bg-emerald-500/15 text-emerald-300 font-semibold'
+                          : 'text-neutral-200 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        Available (Accepting)
+                      </span>
+                      {employee?.availability === 'Available' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                    </button>
+                    <button
+                      onClick={() => handleUpdateAvailability('Busy')}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        employee?.availability === 'Busy'
+                          ? 'bg-amber-500/15 text-amber-300 font-semibold'
+                          : 'text-neutral-200 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        Busy (In Deep Work)
+                      </span>
+                      {employee?.availability === 'Busy' && <Check className="w-3.5 h-3.5 text-amber-400" />}
+                    </button>
+                    <button
+                      onClick={() => handleUpdateAvailability('On Leave')}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        employee?.availability === 'On Leave'
+                          ? 'bg-red-500/15 text-red-300 font-semibold'
+                          : 'text-neutral-200 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-400" />
+                        On Leave (Auto-Route Away)
+                      </span>
+                      {employee?.availability === 'On Leave' && <Check className="w-3.5 h-3.5 text-red-400" />}
+                    </button>
+                  </div>
+                </>
               )}
             </div>
 
@@ -391,7 +424,7 @@ export default function EmployeeDashboard({ userEmail, currentUser }) {
 
         {/* Admin Oversight Switcher Bar */}
         {role === 'admin' && (
-          <div className="relative z-10 mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02] -mx-6 md:-mx-8 -mb-6 md:-mb-8 px-6 md:px-8 py-3.5">
+          <div className="relative z-10 mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02] -mx-6 md:-mx-8 -mb-6 md:-mb-8 px-6 md:px-8 py-3.5 rounded-b-2xl">
             <div className="flex items-center gap-2.5 flex-wrap">
               <span className="text-xs font-semibold text-neutral-300 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-blue-400" /> Inspecting Staff Workspace:
