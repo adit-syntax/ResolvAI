@@ -173,9 +173,8 @@ export default function LandingPage({ onLogin }) {
   {/* ─── NAV ─── */}
   <header className="sticky top-0 z-40 bg-[#09090b]/80 backdrop-blur-md border-b border-neutral-800/80">
     <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
-      <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-        <ResolvAiLogo className="w-7 h-7" />
-        <span className="font-bold text-[15px] text-white tracking-tight">Resolv<span className="text-[#22c55e]">AI</span></span>
+      <div className="flex items-center cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+        <ResolvAiLogo variant="horizontal" className="h-9 w-auto" />
       </div>
       <nav className="hidden md:flex items-center gap-6 text-[13px] text-neutral-400">
         <a href="#demo" className="hover:text-white transition-colors">See it work</a>
@@ -268,7 +267,8 @@ export default function LandingPage({ onLogin }) {
   <footer className="border-t border-neutral-800/50 py-8 px-4 sm:px-6">
     <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-600">
       <div className="flex items-center gap-2">
-        <ResolvAiLogo className="w-5 h-5" /><span className="text-white font-semibold">ResolvAI</span><span>· Open-source AI helpdesk</span>
+        <ResolvAiLogo variant="horizontal" className="h-6 w-auto" />
+        <span className="text-neutral-500">· Open-source AI helpdesk</span>
       </div>
       <div className="flex items-center gap-5">
         <button onClick={() => setShowDocsModal(true)} className="hover:text-neutral-300 transition-colors">Docs</button>
@@ -289,7 +289,7 @@ export default function LandingPage({ onLogin }) {
           <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors"><X className="w-4 h-4" /></button>
           {/* Header */}
           <div className="text-center mb-5">
-            <ResolvAiLogo className="w-9 h-9 mx-auto mb-2.5" />
+            <ResolvAiLogo variant="icon" className="w-12 h-12 mx-auto mb-2.5 shadow-lg rounded-2xl" />
             <h3 className="text-[17px] font-bold text-white">{authTab === 'login' ? 'Welcome back' : 'Create your account'}</h3>
             <p className="text-xs text-neutral-500 mt-0.5">{authTab === 'login' ? 'Or try a demo profile instantly' : 'Free to use · Open-source'}</p>
           </div>

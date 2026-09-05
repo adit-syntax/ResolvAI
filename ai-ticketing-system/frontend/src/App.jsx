@@ -117,12 +117,12 @@ function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-[#2a2a2a]">
-          <div className="flex items-center gap-2.5">
-            <ResolvAiLogo className="w-8 h-8 flex-shrink-0 drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]" />
+        <div className="px-5 py-4 border-b border-[#2a2a2a]">
+          <div className="flex items-center gap-3">
+            <ResolvAiLogo variant="icon" className="w-9 h-9 flex-shrink-0 drop-shadow-[0_0_10px_rgba(34,197,94,0.3)] rounded-xl" />
             <div>
-              <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight">ResolvAI</h1>
-              <p className="text-[11px] text-[#22c55e] font-medium leading-tight">Smart AI Helpdesk</p>
+              <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight">Resolv<span className="text-[#22c55e]">AI</span></h1>
+              <p className="text-[11px] text-neutral-400 font-medium leading-tight">Smart AI Helpdesk</p>
             </div>
           </div>
         </div>

@@ -1,12 +1,64 @@
 import React from 'react';
+import faviconImg from '../assets/favicon.png';
+import iconImg from '../assets/icon.png';
+import logoHorizontalDark from '../assets/logo-horizontal-dark.png';
+import logoHorizontalLight from '../assets/logo-horizontal.png';
 
-export default function ResolvAiLogo({ className = "w-8 h-8" }) {
+/**
+ * ResolvAiLogo — Multi-variant component utilizing the official ResolvAI logo pack.
+ *
+ * @param {string} variant - 'icon' (default squircle), 'transparent-icon', 'horizontal' (dark theme), 'horizontal-light'
+ * @param {string} className - Tailwind or custom CSS classes
+ * @param {string} alt - Accessibility alt text
+ */
+export default function ResolvAiLogo({
+  className = "w-8 h-8",
+  variant = "icon",
+  alt = "ResolvAI",
+  ...props
+}) {
+  if (variant === "horizontal" || variant === "full" || variant === "dark") {
+    return (
+      <img
+        src={logoHorizontalDark}
+        alt={alt}
+        className={`object-contain ${className}`}
+        {...props}
+      />
+    );
+  }
+
+  if (variant === "horizontal-light" || variant === "light") {
+    return (
+      <img
+        src={logoHorizontalLight}
+        alt={alt}
+        className={`object-contain ${className}`}
+        {...props}
+      />
+    );
+  }
+
+  if (variant === "transparent-icon" || variant === "mark") {
+    return (
+      <img
+        src={iconImg}
+        alt={alt}
+        className={`object-contain ${className}`}
+        {...props}
+      />
+    );
+  }
+
+  // Default: squircle icon badge
   return (
-    <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100" height="100" rx="24" fill="#0f0f0f"/>
-      <rect x="4" y="4" width="92" height="92" rx="22" stroke="#22c55e" strokeOpacity="0.4" strokeWidth="4"/>
-      <path d="M30 70V30H48C56 30 62 35 62 42C62 49 56 53 48 53H30M48 53L64 70" stroke="#22c55e" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="74" cy="28" r="6.5" fill="#22c55e"/>
-    </svg>
+    <img
+      src={faviconImg}
+      alt={alt}
+      className={`object-contain rounded-xl select-none ${className}`}
+      {...props}
+    />
   );
 }
+
+export { faviconImg, iconImg, logoHorizontalDark, logoHorizontalLight };
