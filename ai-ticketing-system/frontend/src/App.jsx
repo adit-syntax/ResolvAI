@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import {
   Headphones, ListTodo, Users, BarChart3, LayoutDashboard,
@@ -78,6 +78,7 @@ function NavItem({ path, icon: Icon, label, onClose }) {
 function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
   const isAdmin = role === 'admin';
   const isEmployee = role === 'employee';
+  const dashboardPath = isAdmin ? '/tickets' : isEmployee ? '/employee-dashboard' : '/';
   
   let navItems = userNavItems;
   let sectionLabel = 'User';
@@ -116,15 +117,27 @@ function Sidebar({ isOpen, onClose, role, email, onLogout, onOpenSettings }) {
         lg:translate-x-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        {/* Logo */}
+        {/* Logo & Brand (Clickable Dashboard Link) */}
         <div className="px-5 py-4 border-b border-[#2a2a2a]">
-          <div className="flex items-center gap-3">
-            <ResolvAiLogo variant="icon" className="w-9 h-9 flex-shrink-0 drop-shadow-[0_0_10px_rgba(34,197,94,0.3)] rounded-xl" />
+          <Link
+            to={dashboardPath}
+            onClick={onClose}
+            className="flex items-center gap-3 group select-none cursor-pointer"
+            title={`Go to ${isAdmin ? 'Admin' : isEmployee ? 'Staff' : 'User'} Dashboard`}
+          >
+            <ResolvAiLogo
+              variant="icon"
+              className="w-9 h-9 flex-shrink-0 drop-shadow-[0_0_10px_rgba(34,197,94,0.3)] rounded-xl group-hover:scale-105 transition-transform"
+            />
             <div>
-              <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight">Resolv<span className="text-[#22c55e]">AI</span></h1>
-              <p className="text-[11px] text-neutral-400 font-medium leading-tight">Smart AI Helpdesk</p>
+              <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight group-hover:text-[#22c55e] transition-colors">
+                Resolv<span className="text-[#22c55e]">AI</span>
+              </h1>
+              <p className="text-[11px] text-neutral-400 font-medium leading-tight">
+                Smart AI Helpdesk
+              </p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Role badge */}
@@ -193,14 +206,27 @@ function Layout({ children, role, email, onLogout }) {
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      {/* Mobile header */}
+      {/* Mobile header with clickable logo */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-[#0f0f0f] border-b border-[#2a2a2a] px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-        >
-          <Menu className="w-5 h-5 text-white" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5 text-white" />
+          </button>
+          <Link
+            to={role === 'admin' ? '/tickets' : role === 'employee' ? '/employee-dashboard' : '/'}
+            className="flex items-center gap-2 group select-none cursor-pointer"
+            title="Go to Dashboard"
+          >
+            <ResolvAiLogo variant="icon" className="w-7 h-7 rounded-lg group-hover:scale-105 transition-transform" />
+            <span className="text-sm font-bold text-white group-hover:text-[#22c55e] transition-colors">
+              Resolv<span className="text-[#22c55e]">AI</span>
+            </span>
+          </Link>
+        </div>
         <button
           onClick={() => setSettingsOpen(true)}
           className="p-2 rounded-lg text-purple-400 hover:bg-purple-500/10 transition-colors flex items-center gap-1.5 text-xs font-semibold"
