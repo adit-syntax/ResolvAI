@@ -10,7 +10,7 @@ import HeroIllustration from '../components/HeroIllustration.jsx';
 import {
   ArrowRight, ShieldCheck, User, Bot, AlertTriangle,
   MessageSquare, CheckCircle2, Headphones,
-  X, UserPlus, LogIn, ExternalLink, Zap, Users
+  X, UserPlus, LogIn, ExternalLink, Zap, Users, Loader2
 } from 'lucide-react';
 import { authApi, setAuthToken } from '../api.js';
 
@@ -121,15 +121,34 @@ export default function LandingPage({ onLogin }) {
   const [regLoading, setRegLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
 
+  const [quickLoading, setQuickLoading] = useState(null);
+  const [quickError, setQuickError] = useState('');
+  const [isWakingBackend, setIsWakingBackend] = useState(false);
+
   const handleQuickLogin = async (type) => {
+    if (quickLoading) return;
+    setQuickLoading(type);
+    setQuickError('');
+    setLoginError('');
+
+    const wakeTimer = setTimeout(() => {
+      setIsWakingBackend(true);
+    }, 2000);
+
     const cred = DEMO_CREDENTIALS[type];
     try {
       const data = await authApi.login(cred.email, cred.password);
+      clearTimeout(wakeTimer);
+      setIsWakingBackend(false);
       setAuthToken(data.access_token);
       onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
       setShowLoginModal(false);
     } catch (err) {
-      setLoginError(err.message || 'Backend offline — start the API server.');
+      clearTimeout(wakeTimer);
+      setIsWakingBackend(false);
+      setQuickError(err.message || 'Unable to log in — please wait a moment while the cloud server wakes up.');
+    } finally {
+      setQuickLoading(null);
     }
   };
 
@@ -207,9 +226,18 @@ export default function LandingPage({ onLogin }) {
         ResolvAI categorizes incoming tickets, scrubs sensitive PII, grounds solutions against verified SOPs using hybrid vector search, and balances active workloads across your engineering staff.
       </p>
       <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-14">
-        <PrimaryButton onClick={() => handleQuickLogin('user')}><User className="w-4 h-4" /> Try as Customer</PrimaryButton>
-        <PrimaryButton className="bg-neutral-900 border border-neutral-800 text-neutral-200" onClick={() => handleQuickLogin('employee')}><Headphones className="w-4 h-4 text-purple-400" /> Try as Support Staff</PrimaryButton>
-        <PrimaryButton className="bg-neutral-900 border border-neutral-800 text-neutral-200" onClick={() => handleQuickLogin('admin')}><ShieldCheck className="w-4 h-4 text-blue-400" /> Try as Admin</PrimaryButton>
+        <PrimaryButton disabled={Boolean(quickLoading)} onClick={() => handleQuickLogin('user')}>
+          {quickLoading === 'user' ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
+          {quickLoading === 'user' ? 'Signing in…' : 'Try as Customer'}
+        </PrimaryButton>
+        <PrimaryButton disabled={Boolean(quickLoading)} className="bg-neutral-900 border border-neutral-800 text-neutral-200" onClick={() => handleQuickLogin('employee')}>
+          {quickLoading === 'employee' ? <Loader2 className="w-4 h-4 animate-spin text-purple-400" /> : <Headphones className="w-4 h-4 text-purple-400" />}
+          {quickLoading === 'employee' ? 'Signing in…' : 'Try as Support Staff'}
+        </PrimaryButton>
+        <PrimaryButton disabled={Boolean(quickLoading)} className="bg-neutral-900 border border-neutral-800 text-neutral-200" onClick={() => handleQuickLogin('admin')}>
+          {quickLoading === 'admin' ? <Loader2 className="w-4 h-4 animate-spin text-blue-400" /> : <ShieldCheck className="w-4 h-4 text-blue-400" />}
+          {quickLoading === 'admin' ? 'Signing in…' : 'Try as Admin'}
+        </PrimaryButton>
       </div>
     </div>
     <div className="flex-1 flex justify-center">
@@ -343,15 +371,43 @@ export default function LandingPage({ onLogin }) {
 
           {/* Quick demo profiles */}
           <p className="text-[10px] text-neutral-600 uppercase tracking-wider text-center mb-2">Quick demo access</p>
-          <div className="grid grid-cols-3 gap-2 mb-5">
+          <div className="grid grid-cols-3 gap-2 mb-3">
             {[{ type: 'user', label: 'Customer', sub: 'End user', icon: User, color: 'text-[#22c55e]' },{ type: 'employee', label: 'Support', sub: 'Staff queue', icon: Headphones, color: 'text-purple-400' },{ type: 'admin', label: 'Admin', sub: 'Full access', icon: ShieldCheck, color: 'text-blue-400' }].map(({ type, label, sub, icon: Icon, color }) => (
-              <button key={type} type="button" onClick={() => handleQuickLogin(type)} className="p-3 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 hover:border-neutral-700 transition-all text-center">
-                <Icon className={`w-4 h-4 ${color} mx-auto mb-1.5`} />
-                <span className="text-xs font-semibold text-white block">{label}</span>
+              <button
+                key={type}
+                type="button"
+                disabled={Boolean(quickLoading)}
+                onClick={() => handleQuickLogin(type)}
+                className="p-3 rounded-xl border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800 hover:border-neutral-700 transition-all text-center disabled:opacity-60"
+              >
+                {quickLoading === type ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white mx-auto mb-1.5" />
+                ) : (
+                  <Icon className={`w-4 h-4 ${color} mx-auto mb-1.5`} />
+                )}
+                <span className="text-xs font-semibold text-white block">
+                  {quickLoading === type ? 'Connecting…' : label}
+                </span>
                 <span className="text-[10px] text-neutral-600">{sub}</span>
               </button>
             ))}
           </div>
+
+          {/* Render cold-start status notification */}
+          {isWakingBackend && (
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 text-emerald-300 text-xs mb-3 animate-pulse">
+              <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+              <span>Waking up cloud server (Render free tier takes ~30s)…</span>
+            </div>
+          )}
+
+          {/* Quick demo error notice */}
+          {quickError && (
+            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs mb-3">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="flex-1">{quickError}</span>
+            </div>
+          )}
           {/* Divider */}
           <div className="flex items-center gap-3 mb-4"><div className="flex-1 h-px bg-neutral-800" />
             <span className="text-[10px] text-neutral-600 uppercase tracking-wider">{authTab === 'login' ? 'or with email' : 'your info'}</span>
