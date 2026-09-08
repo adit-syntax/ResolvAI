@@ -32,7 +32,6 @@ import IncidentAlertBanner from './components/IncidentAlertBanner.jsx';
 const userNavItems = [
   { path: '/', icon: Headphones, label: 'Support Portal' },
   { path: '/my-tickets', icon: FileText, label: 'My Tickets' },
-  { path: '/knowledge', icon: BookOpen, label: 'Knowledge Base (RAG)' },
 ];
 
 const employeeNavItems = [
@@ -325,7 +324,6 @@ export default function App() {
               <>
                 <Route path="/" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
                 <Route path="/my-tickets" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
-                <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </>
             )}
