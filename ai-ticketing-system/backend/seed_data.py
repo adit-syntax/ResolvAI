@@ -98,15 +98,17 @@ EXAMPLE_TICKETS = [
 
 
 def seed_employees(db: Session):
-    """Seed the employee directory if empty."""
-    count = db.query(Employee).count()
-    if count > 0:
-        print(f"[Seed] Employee directory already has {count} entries, skipping.")
-        return
-
+    """Seed the employee directory (idempotent: ensures each seed employee exists)."""
+    added = 0
     for emp_data in SEED_EMPLOYEES:
-        emp = Employee(**emp_data)
-        db.add(emp)
+        existing = db.query(Employee).filter(Employee.email.ilike(emp_data["email"])).first()
+        if not existing:
+            emp = Employee(**emp_data)
+            db.add(emp)
+            added += 1
 
-    db.commit()
-    print(f"[Seed] Added {len(SEED_EMPLOYEES)} employees to the directory.")
+    if added > 0:
+        db.commit()
+        print(f"[Seed] Added {added} standard employees to the directory.")
+    else:
+        print(f"[Seed] All standard employees already present.")

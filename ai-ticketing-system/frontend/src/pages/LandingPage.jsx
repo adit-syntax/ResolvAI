@@ -420,6 +420,9 @@ export default function LandingPage({ onLogin }) {
               <input type="password" required placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-[#22c55e]/60 transition-colors" />
               {loginError && (<div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-xs"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{loginError}</div>)}
               <button type="submit" disabled={loginLoading} className="w-full py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#1ea750] text-black font-bold text-xs transition-colors disabled:opacity-60">{loginLoading ? 'Signing in…' : 'Sign in'}</button>
+              <p className="text-[11px] text-neutral-500 text-center pt-1 leading-relaxed">
+                Staff directory accounts (e.g. <span className="text-neutral-400 font-mono">george.lee@company.com</span>) use password <span className="text-neutral-300 font-mono">employee123</span>
+              </p>
             </form>
           ) : (
             <form onSubmit={handleFormRegister} className="space-y-2.5">

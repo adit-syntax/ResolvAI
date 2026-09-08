@@ -117,9 +117,25 @@ def _seed_demo_users(db):
         elif not existing.employee_id and emp_id:
             existing.employee_id = emp_id
 
+    # Ensure EVERY employee in the Employee directory has an active User login account
+    all_employees = db.query(Employee).all()
+    for emp in all_employees:
+        existing = db.query(User).filter(User.email.ilike(emp.email)).first()
+        if not existing:
+            user = User(
+                name=emp.name,
+                email=emp.email.lower(),
+                hashed_password=get_password_hash("employee123"),
+                role="employee",
+                employee_id=emp.id,
+            )
+            db.add(user)
+        elif not existing.employee_id:
+            existing.employee_id = emp.id
+
     try:
         db.commit()
-        print("[Startup] Demo user accounts ready.")
+        print("[Startup] Demo user accounts and employee logins ready.")
     except Exception as e:
         db.rollback()
         print(f"[Startup] Demo user seed warning: {e}")

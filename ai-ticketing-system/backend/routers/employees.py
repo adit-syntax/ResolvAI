@@ -10,7 +10,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 from database import get_db
-from models import Employee, Ticket, TicketTimeline
+from models import Employee, Ticket, TicketTimeline, User
 from schemas import (
     EmployeeCreate, EmployeeUpdate, EmployeeResponse,
     ActiveTicketInfo, EmployeeAvailabilityUpdate
@@ -286,14 +286,36 @@ def get_employee(employee_id: int, db: Session = Depends(get_db), current_user=D
 @router.post("/", response_model=EmployeeResponse)
 def create_employee(data: EmployeeCreate, db: Session = Depends(get_db), current_user=Depends(require_admin)):
     """Add a new employee. Admin only."""
-    existing = db.query(Employee).filter(Employee.email == data.email).first()
+    clean_email = data.email.strip().lower()
+    existing = db.query(Employee).filter(Employee.email.ilike(clean_email)).first()
     if existing:
         raise HTTPException(status_code=400, detail="Employee with this email already exists")
 
-    emp = Employee(**data.model_dump())
+    emp_data = data.model_dump(exclude={"login_password"})
+    emp = Employee(**emp_data)
+    emp.email = clean_email
     db.add(emp)
     db.commit()
     db.refresh(emp)
+
+    # Ensure a corresponding User account exists so the employee can immediately log in
+    user_match = db.query(User).filter(User.email.ilike(clean_email)).first()
+    pwd = data.login_password or "employee123"
+    from auth_utils import get_password_hash
+    if not user_match:
+        new_user = User(
+            name=emp.name,
+            email=clean_email,
+            hashed_password=get_password_hash(pwd),
+            role="employee",
+            employee_id=emp.id,
+        )
+        db.add(new_user)
+        db.commit()
+    elif not user_match.employee_id:
+        user_match.employee_id = emp.id
+        db.commit()
+
     return emp
 
 

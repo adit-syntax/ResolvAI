@@ -95,6 +95,7 @@ class EmployeeCreate(BaseModel):
     avg_resolution_time: float = 0.0
     current_ticket_load: int = 0
     availability: str = "Available"
+    login_password: Optional[str] = "employee123"
 
 
 class EmployeeUpdate(BaseModel):

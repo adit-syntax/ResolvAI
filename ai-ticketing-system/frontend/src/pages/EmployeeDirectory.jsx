@@ -64,12 +64,11 @@ export default function EmployeeDirectory() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Destructure login_password out before sending to API
       const { login_password, ...apiForm } = form;
       if (editingId) {
         await employeeApi.update(editingId, apiForm);
       } else {
-        await employeeApi.create(apiForm);
+        await employeeApi.create({ ...apiForm, login_password: login_password || 'employee123' });
       }
 
       // Save/update employee login credentials in localStorage so they can sign in

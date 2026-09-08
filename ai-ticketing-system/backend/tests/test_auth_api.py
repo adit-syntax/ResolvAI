@@ -51,3 +51,16 @@ async def test_me_endpoint(async_client, admin_auth_headers):
     data = res.json()
     assert data["role"] == "admin"
     assert data["email"] == "admin@gmail.com"
+
+
+@pytest.mark.asyncio
+async def test_directory_employee_login_success(async_client):
+    """Seeded directory employees such as George Lee should authenticate with employee123."""
+    res = await async_client.post("/api/auth/login", json={"email": "george.lee@company.com", "password": "employee123"})
+    assert res.status_code == 200
+    data = res.json()
+    assert "access_token" in data
+    assert data["role"] == "employee"
+    assert data["email"] == "george.lee@company.com"
+    assert data["name"] == "George Lee"
+

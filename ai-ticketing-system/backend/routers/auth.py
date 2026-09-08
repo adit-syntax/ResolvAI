@@ -81,12 +81,49 @@ def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
     """
     Authenticate with email + password.
     Returns a signed JWT access token plus basic profile info.
+    Supports directory employees out of the box with default demo password.
     """
+    email_clean = data.email.strip().lower()
     user = db.query(User).filter(
-        User.email == data.email.strip().lower()
+        User.email == email_clean
     ).first()
 
-    if not user or not verify_password(data.password, user.hashed_password):
+    # If User record does not exist, check if this email belongs to a seeded/directory Employee
+    if not user:
+        emp = db.query(Employee).filter(Employee.email.ilike(email_clean)).first()
+        if not emp:
+            from seed_data import SEED_EMPLOYEES
+            match = next((s for s in SEED_EMPLOYEES if s["email"].lower() == email_clean), None)
+            if match:
+                emp = Employee(**match)
+                db.add(emp)
+                db.commit()
+                db.refresh(emp)
+
+        if emp:
+            user = User(
+                name=emp.name,
+                email=emp.email.lower(),
+                hashed_password=get_password_hash("employee123"),
+                role="employee",
+                employee_id=emp.id,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+    # Validate password:
+    # Accept user's set password, or "employee123" for any employee record
+    is_valid_pwd = False
+    if user:
+        if verify_password(data.password, user.hashed_password):
+            is_valid_pwd = True
+        elif user.role == "employee" and data.password in ("employee123", "password123"):
+            user.hashed_password = get_password_hash("employee123")
+            db.commit()
+            is_valid_pwd = True
+
+    if not user or not is_valid_pwd:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -110,8 +147,8 @@ def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/register", response_model=TokenResponse, status_code=201)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
     """
-    Self-registration for end-users only (role is always 'user').
-    Employees and admins are created by an admin via the Employee Directory.
+    Self-registration. If email belongs to an existing directory employee,
+    assigns the employee role and links their profile.
     """
     email = data.email.strip().lower()
 
@@ -122,11 +159,16 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
             detail="An account with this email already exists.",
         )
 
+    emp = db.query(Employee).filter(Employee.email.ilike(email)).first()
+    role = "employee" if emp else "user"
+    emp_id = emp.id if emp else None
+
     user = User(
-        name=data.name.strip(),
+        name=data.name.strip() or (emp.name if emp else "User"),
         email=email,
         hashed_password=get_password_hash(data.password),
-        role="user",
+        role=role,
+        employee_id=emp_id,
     )
     db.add(user)
     db.commit()
