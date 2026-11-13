@@ -41,8 +41,6 @@ async def _sla_sweep_loop():
     means SLA breaches get actioned and queued tickets get promoted without
     someone clicking a button.
     """
-    # ponytail: runs in-process in every worker — fine for a single instance.
-    # Add leader election or a dedicated cron service if you scale to many workers.
     interval = int(os.getenv("SLA_SWEEP_INTERVAL_SECONDS", "300"))
     while True:
         try:
@@ -169,9 +167,6 @@ def _ensure_schema_columns(eng):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables for zero-config local/dev startup. In production Alembic
-    # ('alembic upgrade head') owns the schema; create_all is idempotent
-    # (checkfirst) so it's a no-op once migrations have run.
     Base.metadata.create_all(bind=engine)
     _ensure_schema_columns(engine)
     print("[Startup] Database tables created / verified.")
@@ -184,7 +179,6 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    # Real-time broadcasts + background SLA sweeps need the running event loop.
     manager.loop = asyncio.get_running_loop()
     sweep_task = asyncio.create_task(_sla_sweep_loop())
 
@@ -204,7 +198,6 @@ app = FastAPI(
     description="Production-grade AI-powered internal helpdesk.",
     version="2.0.0",
     lifespan=lifespan,
-    # Disable Swagger/ReDoc in production for security (optional)
     docs_url="/docs" if os.getenv("ENVIRONMENT", "development") != "production" else None,
     redoc_url=None,
 )
@@ -216,7 +209,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
-# Read from env. Falls back to permissive localhost-only for local dev.
 
 _raw_origins = os.getenv(
     "ALLOWED_ORIGINS",
@@ -249,12 +241,11 @@ from jose import JWTError
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
-    """Authenticated WebSocket endpoint for real-time ticket alerts and updates."""
     if token:
         try:
-            decode_token(token)  # raises JWTError on invalid/expired token
+            decode_token(token)
         except JWTError:
-            await websocket.close(code=1008)  # 1008: Policy Violation
+            await websocket.close(code=1008)
             return
     elif os.getenv("ENVIRONMENT") == "production":
         await websocket.close(code=1008)
@@ -269,7 +260,15 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         manager.disconnect(websocket)
 
 
-# ─── Health Check ─────────────────────────────────────────────────────────────
+# ─── Root & Health Check ─────────────────────────────────────────────────────
+
+@app.get("/")
+def read_root():
+    return {
+        "message": "ResolvAI Backend is live",
+        "docs": "/docs",
+        "health": "/api/health"
+    }
 
 @app.get("/api/health")
 def health_check():
