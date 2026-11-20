@@ -19,7 +19,7 @@ import json
 import asyncio
 from typing import List, Optional
 
-from database import engine, SessionLocal, Base
+from database import engine, SessionLocal, Base, init_extensions
 from models import *  # registers all ORM models
 from seed_data import seed_employees
 from routers import tickets, employees, analytics, settings, knowledge
@@ -89,7 +89,25 @@ def _seed_demo_users(db):
         db.add(emp_support)
         db.flush()
 
+    emp_staff = db.query(Employee).filter(Employee.email == "staff@resolvai.com").first()
+    if not emp_staff:
+        emp_staff = Employee(
+            name="Staff Support",
+            email="staff@resolvai.com",
+            department="IT",
+            role="Support Specialist",
+            skill_tags="access,general,support,vpn,billing,bug",
+            avg_resolution_time=1.5,
+            current_ticket_load=0,
+            availability="Available",
+        )
+        db.add(emp_staff)
+        db.flush()
+
     demo_accounts = [
+        {"name": "Admin",         "email": "admin@resolvai.com",    "password": "admin123",    "role": "admin"},
+        {"name": "Staff Support", "email": "staff@resolvai.com",    "password": "staff123",    "role": "employee"},
+        {"name": "Customer",      "email": "customer@resolvai.com", "password": "customer123", "role": "user"},
         {"name": "Admin User",    "email": "admin@gmail.com",       "password": "admin123",    "role": "admin"},
         {"name": "Support Agent", "email": "employee@company.com",  "password": "employee123", "role": "employee"},
         {"name": "Demo User",     "email": "user@gmail.com",        "password": "user123",     "role": "user"},
@@ -99,30 +117,41 @@ def _seed_demo_users(db):
         {"name": "Admin Internal","email": "admin@resolvai.internal","password": "admin123",   "role": "admin"},
     ]
 
+    seen_emails = set()
     for acct in demo_accounts:
-        emp_match = db.query(Employee).filter(Employee.email.ilike(acct["email"])).first()
+        email_clean = acct["email"].lower()
+        seen_emails.add(email_clean)
+        emp_match = db.query(Employee).filter(Employee.email.ilike(email_clean)).first()
         emp_id = emp_match.id if emp_match else None
-        existing = db.query(User).filter(User.email == acct["email"]).first()
+        existing = db.query(User).filter(User.email.ilike(email_clean)).first()
         if not existing:
             user = User(
                 name=acct["name"],
-                email=acct["email"],
+                email=email_clean,
                 hashed_password=get_password_hash(acct["password"]),
                 role=acct["role"],
                 employee_id=emp_id,
             )
             db.add(user)
-        elif not existing.employee_id and emp_id:
-            existing.employee_id = emp_id
+        else:
+            existing.role = acct["role"]
+            if emp_id and not existing.employee_id:
+                existing.employee_id = emp_id
+
+    db.flush()
 
     # Ensure EVERY employee in the Employee directory has an active User login account
     all_employees = db.query(Employee).all()
     for emp in all_employees:
-        existing = db.query(User).filter(User.email.ilike(emp.email)).first()
+        emp_email = emp.email.lower()
+        if emp_email in seen_emails:
+            continue
+        seen_emails.add(emp_email)
+        existing = db.query(User).filter(User.email.ilike(emp_email)).first()
         if not existing:
             user = User(
                 name=emp.name,
-                email=emp.email.lower(),
+                email=emp_email,
                 hashed_password=get_password_hash("employee123"),
                 role="employee",
                 employee_id=emp.id,
@@ -169,17 +198,21 @@ def _ensure_schema_columns(eng):
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _ensure_schema_columns(engine)
+    init_extensions()
     print("[Startup] Database tables created / verified.")
 
-    # Seed employee + user data
+    # Seed employee + user data & sync vector knowledge base
     db = SessionLocal()
     try:
         seed_employees(db)
         _seed_demo_users(db)
+        from rag_engine import rag_engine
+        rag_engine.sync_with_db(db)
     finally:
         db.close()
 
     manager.loop = asyncio.get_running_loop()
+    await manager.start()
     sweep_task = asyncio.create_task(_sla_sweep_loop())
 
     print("[Startup] ResolvAI ready.")
@@ -187,6 +220,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    await manager.stop()
     sweep_task.cancel()
     print("[Shutdown] Closing connections...")
 

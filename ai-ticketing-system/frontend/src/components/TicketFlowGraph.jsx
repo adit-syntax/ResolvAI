@@ -248,8 +248,8 @@ export default function TicketFlowGraph({ ticket }) {
             <Arrow active={wentAuto && !failedAuto} label="YES" vertical />
             {/* Auto Resolve Card */}
             <Card
-              icon="✨" title="Auto Resolve"
-              sub={wentAuto && !failedAuto ? 'AI Resolved ✓' : 'Not Triggered'}
+              icon="⚡" title="Autonomous Resolution"
+              sub={wentAuto && !failedAuto ? 'Runbook Resolved ✓' : 'Not Triggered'}
               ts={wentAuto && !failedAuto ? fmt(ticket.updated_at) : null}
               status={s(wentAuto && !failedAuto, false, !wentAuto || failedAuto)}
               stepNum="3a"

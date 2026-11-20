@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  BookOpen, Sparkles, Shield, Search, Plus, Filter, CheckCircle2,
+  BookOpen, Shield, Search, Plus, Filter, CheckCircle2,
   ExternalLink, Layers, ArrowRight, RefreshCw, AlertTriangle, FileText,
   Lock, Key, CreditCard, Terminal, Cpu, Database, Server, Headphones,
   Tag, Info, HelpCircle
@@ -128,7 +128,7 @@ export default function KnowledgeBase({ user }) {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3" /> Native GenAI Hub
+                <Cpu className="w-3 h-3" /> Vector RAG Index
               </span>
               <span className="text-xs text-neutral-500">• Hybrid Dense + BM25 Vector Space</span>
             </div>
@@ -183,7 +183,7 @@ export default function KnowledgeBase({ user }) {
                 : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" /> RAG Semantic Playground
+            <Search className="w-3.5 h-3.5 text-purple-400" /> RAG Semantic Playground
           </button>
 
           <button
@@ -293,7 +293,7 @@ export default function KnowledgeBase({ user }) {
           {/* Query Bar */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-xl space-y-4">
             <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Ask Any Support Query (Hybrid RAG Vector Search)
+              <Search className="w-3.5 h-3.5 text-purple-400" /> Ask Any Support Query (Hybrid RAG Vector Search)
             </label>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -308,9 +308,9 @@ export default function KnowledgeBase({ user }) {
               <button
                 onClick={() => handleRunRAG()}
                 disabled={ragLoading}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 active:scale-95 disabled:opacity-50"
+                className="px-6 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 border border-neutral-700 active:scale-95 disabled:opacity-50"
               >
-                {ragLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {ragLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Retrieve &amp; Generate
               </button>
             </div>

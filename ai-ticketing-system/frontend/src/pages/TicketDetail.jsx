@@ -13,9 +13,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Sparkles, Clock, User, MessageSquare, Send,
+  ArrowLeft, Clock, User, MessageSquare, Send,
   AlertTriangle, CheckCircle2, Loader2, ArrowUpCircle, RefreshCw,
-  FileText, Bot, Lightbulb, Lock, ShieldCheck, Cpu, Terminal, Shield, Layers
+  FileText, Bot, Lightbulb, Lock, ShieldCheck, Cpu, Terminal, Shield, Layers, Activity
 } from 'lucide-react';
 import { ticketApi, knowledgeApi } from '../api.js';
 import TicketFlowGraph from '../components/TicketFlowGraph.jsx';
@@ -317,7 +317,7 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
                 {ticket.auto_resolved && ticket.auto_response && (
                   <div className="mt-4 pt-4 border-t border-white/5">
                     <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3" /> AI Auto-Response Sent to User
+                      <Bot className="w-3.5 h-3.5" /> Autonomous Response Sent to User
                     </p>
                     <p className="text-sm text-gray-400 whitespace-pre-line leading-relaxed bg-emerald-500/5 border border-emerald-500/15 rounded-lg p-3">
                       {ticket.auto_response}
@@ -369,7 +369,7 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
                       <Shield className="w-3.5 h-3.5" /> {agentTrace.pii_sanitization?.summary}
                     </span>
                     <span className="flex items-center gap-1.5 text-purple-400 font-medium">
-                      <Sparkles className="w-3.5 h-3.5" /> Grounded In: {agentTrace.grounded_source}
+                      <ShieldCheck className="w-3.5 h-3.5" /> Grounded In: {agentTrace.grounded_source}
                     </span>
                   </div>
                 </div>
@@ -409,9 +409,9 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
                         {aiDraftLoading ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                          <Bot className="w-3.5 h-3.5 text-purple-400" />
                         )}
-                        {aiDraftLoading ? 'Drafting with AI...' : '✨ Generate AI Reply'}
+                        {aiDraftLoading ? 'Drafting with Context...' : 'Draft Response with Context'}
                       </button>
                       <button
                         type="submit"
@@ -638,7 +638,7 @@ export default function TicketDetail({ role = 'employee', userEmail = '' }) {
           {/* AI Analysis Cards */}
           <div className="glass-card p-6">
             <h3 className="text-sm font-semibold text-primary-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" /> AI Analysis
+              <Activity className="w-4 h-4" /> Automated Triage Analysis
             </h3>
             <div className="grid grid-cols-2 gap-2.5">
               {[

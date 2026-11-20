@@ -181,3 +181,83 @@ def get_employee_performance(db: Session = Depends(get_db)):
         })
 
     return results
+
+
+@router.get("/ai-evaluation")
+def get_ai_evaluation_metrics(db: Session = Depends(get_db)):
+    """
+    AI Product Management & Reliability Evaluation Metrics:
+    Groundedness (hallucination index), context relevance, MTTR reduction,
+    PII redaction precision, and A/B prompt experiment comparisons.
+    """
+    from evaluation_engine import evaluation_engine
+    return evaluation_engine.get_product_metrics_summary(db)
+
+
+@router.post("/run-benchmark")
+def run_ai_evaluation_benchmark(current_user=Depends(require_employee_or_admin)):
+    """
+    Execute real-time evaluation benchmark across standard enterprise incident scenarios.
+    Measures pass rate, latency, groundedness, and safety.
+    """
+    from evaluation_engine import evaluation_engine
+    return evaluation_engine.run_benchmark_suite()
+
+
+@router.get("/ai-audit-logs")
+def get_ai_audit_telemetry(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_employee_or_admin)
+):
+    """
+    Enterprise SOC-2 AI Governance & Cost Telemetry.
+    Returns immutable audit logs, token usage, cost estimations, and safety interception metrics.
+    """
+    from models import AIAuditLog
+    from sqlalchemy import desc
+
+    logs = db.query(AIAuditLog).order_by(desc(AIAuditLog.created_at)).limit(limit).all()
+
+    total_ops = db.query(func.count(AIAuditLog.id)).scalar() or 0
+    avg_latency = db.query(func.avg(AIAuditLog.latency_ms)).scalar() or 0.0
+    total_tokens = db.query(func.sum(AIAuditLog.total_tokens)).scalar() or 0
+    total_cost = db.query(func.sum(AIAuditLog.estimated_cost_usd)).scalar() or 0.0
+    pii_count = db.query(func.count(AIAuditLog.id)).filter(AIAuditLog.pii_detected == True).scalar() or 0
+
+    # Model usage distribution
+    model_counts = db.query(
+        AIAuditLog.model_used, func.count(AIAuditLog.id)
+    ).group_by(AIAuditLog.model_used).all()
+
+    return {
+        "summary": {
+            "total_operations": total_ops,
+            "avg_latency_ms": round(float(avg_latency), 2),
+            "total_tokens_consumed": int(total_tokens),
+            "estimated_cost_usd": round(float(total_cost), 4),
+            "pii_interceptions": int(pii_count),
+            "models_distribution": {model: count for model, count in model_counts},
+        },
+        "logs": [
+            {
+                "id": log.id,
+                "ticket_id": log.ticket_id,
+                "operation": log.operation,
+                "model_used": log.model_used,
+                "latency_ms": log.latency_ms,
+                "prompt_tokens": log.prompt_tokens,
+                "completion_tokens": log.completion_tokens,
+                "total_tokens": log.total_tokens,
+                "cost_usd": log.estimated_cost_usd,
+                "pii_detected": log.pii_detected,
+                "pii_entities_count": log.pii_entities_count,
+                "rag_citation": log.rag_citation,
+                "confidence_score": log.confidence_score,
+                "decision_outcome": log.decision_outcome,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+            }
+            for log in logs
+        ]
+    }
+

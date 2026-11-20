@@ -1,12 +1,14 @@
-# 🤖 ResolvAI — Autonomous AI-Native Helpdesk & Ticketing Platform
 
-[![Backend Tests](https://img.shields.io/badge/pytest-28%20passed%20%7C%20100%25-brightgreen.svg)](#-testing)
+# 🤖 ResolvAI — Autonomous AI-Native Helpdesk & Incident Orchestration Platform
+[![Backend Tests](https://img.shields.io/badge/pytest-33%20passed%20%7C%20100%25-brightgreen.svg)](#-testing)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.x-61DAFB.svg)](https://react.dev/)
-[![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+[![Vite](https://img.shields.io/badge/Vite-5.x-646CFF.svg)](https://vitejs.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
+[![License](https://img.shields.io/badge/License-Open%20Source-purple.svg)](LICENSE)
 
-> **ResolvAI** is a production-grade, AI-native internal helpdesk and workload orchestration platform. Built for modern enterprise engineering teams, it pairs an **Autonomous ReAct Agent loop**, a **Hybrid Vector RAG Engine** (Dense Cosine Similarity + BM25 reciprocal rank fusion), an **Enterprise PII Guardrail** with Luhn verification, and **Semantic Duplicate Detection & Outage Clustering** with a real-time React 18 frontend and WebSocket chat bus.
+> **ResolvAI** is a production-grade, AI-native internal helpdesk and workload orchestration platform. Built for modern enterprise engineering and IT teams, it combines an **Autonomous ReAct Agent Loop**, a **Hybrid Vector RAG Engine** (Dense Cosine Similarity + BM25 Reciprocal Rank Fusion) with **PostgreSQL pgvector persistence**, **Enterprise PII Guardrails** with Luhn verification, an **Automated AI Evaluation Framework** (Groundedness, Context Relevance & Benchmarking), **Distributed Real-Time State via Redis Pub/Sub**, **SOC-2 AI Cost & Audit Governance**, **Semantic Outage Clustering**, and dynamic **Workload-Aware Ticket Routing** with a clean React 18 SPA (29 kB entry bundle) and WebSocket chat bus.
 
 ---
 
@@ -14,18 +16,18 @@
 
 ```
                                   +---------------------------------------+
-                                   |         Web Frontend (React 18)       |
-                                   | (Framer Motion UI, Live Chat Bus,     |
-                                   |  Executive Analytics & Workspaces)    |
+                                  |         Web Frontend (React 18)       |
+                                  | (Clean Runbook UI, User Portal, Staff |
+                                  |  Workspace, Analytics & Live WS Chat) |
                                   +-------------------+-------------------+
                                                       |
                                            HTTP REST / WebSocket
                                                       |
                                                       v
                                   +---------------------------------------+
-                                   |         Backend API (FastAPI)         |
-                                   | (Auth, RBAC, SlowAPI Rate Limiter,    |
-                                   |  Async Background SLA Automation)     |
+                                  |         Backend API (FastAPI)         |
+                                  | (Auth, RBAC, SlowAPI Rate Limiter,    |
+                                  |  Async Background SLA Sweep Engine)   |
                                   +---------+-------------------+---------+
                                             |                   |
                      +----------------------+                   +-----------------------+
@@ -42,9 +44,10 @@
                      |                                                                 |
                      v                                                                 v
     +---------------------------------+                               +----------------------------------+
-    |    Database & Persistence       |                               |      External Dispatches         |
-    |  - PostgreSQL (prod) / SQLite   |                               |  - Real-time WebSockets (`/ws`)  |
-    |  - Alembic Schema Migrations    |                               |  - Slack Incident Alerts         |
+    |    Database & Distributed Bus   |                               |      External Dispatches         |
+    |  - PostgreSQL with pgvector     |                               |  - Distributed Redis Pub/Sub     |
+    |  - SOC-2 AI Audit Log Storage   |                               |  - Real-time WebSockets (`/ws`)  |
+    |  - Alembic Schema Migrations    |                               |  - Slack Incident Alert Cards    |
     +---------------------------------+                               +----------------------------------+
 ```
 
@@ -52,22 +55,22 @@
 
 ## 🧠 AI-Native Architecture & Core Innovations
 
-ResolvAI implements five foundational AI engineering modules:
+ResolvAI implements five foundational AI engineering modules tailored for production GenAI environments:
 
 ### 1. 🛡️ Enterprise PII Sanitizer & Security Guardrail (`guardrails.py`)
-- **Zero-Data-Leakage Design**: Sanitizes all customer input before dispatching to external LLMs.
+- **Zero-Data-Leakage Design**: Sanitizes all user inputs before dispatching to external LLMs.
 - **Entity Detection**: Masks Credit Cards (with **Luhn checksum** validation to prevent false positives), API Keys (`sk_`, `gsk_`, JWTs, AWS credentials), Passwords, SSNs, and connection strings.
-- **Audit Logging**: Emits structured redaction summaries (`[AI Guardrail] Redacted: 1 credit_card, 1 api_key`).
+- **Structured Audit Logging**: Emits structured redaction summaries (e.g. `[AI Guardrail] Redacted: 1 credit_card, 1 api_key`).
 
 ### 2. 🔍 Hybrid Vector RAG Engine (`rag_engine.py`)
 - **384-Dimensional Dense Embeddings**: Generates semantic vectors for enterprise documentation and SOP runbooks.
 - **BM25 Sparse Keyword Inverted Index**: Ensures exact token matching for system codes, error identifiers, and commands.
-- **Reciprocal Rank Fusion**: Combines dense vector cosine similarity and sparse keyword scores for grounded document retrieval.
-- **Automatic Source Citations**: Includes verified SOP IDs and excerpts in generated responses.
+- **Reciprocal Rank Fusion (RRF)**: Combines dense vector cosine similarity and sparse keyword scores for grounded document retrieval.
+- **Automatic Source Citations**: Grounded responses include verified SOP IDs, confidence scores, and excerpt citations.
 
 ### 3. 🤖 Autonomous ReAct Agent Loop (`agent_tools.py`)
 - **Thought → Action → Observation Loop**: Iteratively reasons over support issues, executes diagnostic tools, and inspects observations before producing final resolutions.
-- **Integrated Tool Registry**: Tools for `search_knowledge_base`, `check_system_health` (real-time microservice status), `inspect_user_account`, and `verify_invoice`.
+- **Tool Registry**: Pre-wired tools for `search_knowledge_base`, `check_system_health` (real-time microservice status), `inspect_user_account`, and `verify_invoice`.
 - **Explainable Trace**: Logs structured reasoning steps viewable in the support dashboard for complete AI auditability.
 
 ### 4. ⚡ Semantic Duplicate Detection & Outage Clustering (`clustering_engine.py`)
@@ -77,13 +80,37 @@ ResolvAI implements five foundational AI engineering modules:
 ### 5. 🎯 Multi-Provider LLM Orchestration (`ai_service.py`)
 - **Primary Inference**: High-throughput **Groq LLaMA 3.3 70B Versatile** with strict JSON schema validation.
 - **Secondary Fallback**: **Anthropic Claude 3 Haiku** for high-reliability failover.
-- **Deterministic Offline Fallback**: Keyword rule matrix for uninterrupted local development and testing.
+- **Deterministic Offline Fallback**: Keyword rule matrix for uninterrupted local development and testing without API keys.
 
 ### 6. 📊 Data Science & Operational Analytics Engine (`routers/analytics.py`)
 - **Descriptive & Diagnostic Analytics**: Aggregates ticket lifecycles across multidimensional dimensions (department workload distribution, category frequency, severity spread).
 - **Time-Series Incident Velocity**: Tracks 30-day creation vs. resolution volume trends for forecasting staffing needs and identifying bottlenecks.
 - **Operational SLA & MTTR Metrics**: Calculates Mean Time to Resolution (MTTR in hours) and automated auto-resolution effectiveness scores based on user feedback.
 - **Interactive Visualizations**: Powered by **Recharts** for real-time executive visibility.
+
+### 7. 🧪 Automated AI Evaluation & Evals Benchmarking (`evaluation_engine.py`)
+- **RAG Triad Reliability Metrics**: Automated scoring for Groundedness/Faithfulness (hallucination index), Context Relevance, and Answer Relevance.
+- **PII Guardrail Audit Precision**: Validates redaction accuracy and zero-data-leakage bounds across synthetic test cases.
+- **A/B Prompt Experimentation Matrix**: Live comparative benchmarking between Variant A (Direct RAG) and Variant B (ReAct Chain-of-Thought with Self-Reflection).
+- **Automated 5-Scenario Benchmark Runner**: On-demand test execution testing 5 canonical enterprise incidents (502 Outages, Okta MFA Lockouts, Stripe Card PII, Postgres Locks, and Frontend OOM crashes).
+
+### 8. 🌐 Distributed Real-Time Architecture & Redis Pub/Sub (`realtime.py`)
+- **Multi-Node Cluster Synchronization**: When scaling horizontally across multiple Uvicorn workers or Kubernetes pods, `ConnectionManager` publishes events via Redis Pub/Sub (`resolvai:realtime:events`) so all connected clients receive immediate updates.
+- **Resilient Fallback**: Automatically falls back to in-memory broadcasting if Redis is unavailable or unconfigured, preserving 100% functionality in single-node setups.
+
+### 9. 🗄️ Persistent Vector Store & `pgvector` Integration (`rag_engine.py`, `models.py`)
+- **Persistent Knowledge Runbooks**: Stores SOP runbooks, tag metadata, and 384-dimensional dense vectors in the `knowledge_articles` database table.
+- **Native PostgreSQL pgvector**: Supports native PostgreSQL vector operations via `init_extensions()` with automatic cold-start vector cache warming.
+
+### 10. 🛡️ Enterprise SOC-2 AI Governance & Cost Telemetry (`routers/analytics.py`, `ai_service.py`)
+- **Immutable AIAuditLog**: Tracks every AI operation with exact latency (ms), model used, prompt/completion token consumption, dollar cost estimations ($USD), and PII safety intercepts.
+- **Audit API**: Accessible to admins via `GET /api/analytics/ai-audit-logs` for cost visibility and compliance reporting.
+
+### 11. 🐳 1-Command Production Fleet (`docker-compose.yml`)
+- Provisions PostgreSQL 16 with pgvector, Redis 7 Alpine, FastAPI Python 3.11 backend, and Nginx Alpine frontend with a single command:
+  ```bash
+  docker compose up -d --build
+  ```
 
 ---
 
@@ -95,13 +122,13 @@ ResolvAI implements five foundational AI engineering modules:
 graph TD
     A[User Visits ResolvAI] --> B[Chooses: Sign In or Create Account]
     B --> REG[New User: Self-Register with Name + Email + Password]
-    B --> LOGIN[Returning User: Sign In with Email + Password]
+    B --> LOGIN[Returning User: Sign In with Email + Password / Google OAuth]
     REG --> C[Open User Portal]
     LOGIN --> C
     C --> D[Submit Ticket with Natural Language Description]
     D --> E[AI Evaluates Category, Severity & User Sentiment]
     E --> F{Is Ticket Eligible for AI Auto-Resolution?}
-    F -- Yes --> G[Display Instant Step-by-Step AI Solution]
+    F -- Yes --> G[Display Instant Step-by-Step AI Solution Grounded in Runbooks]
     G --> H[User Submits Feedback: Helpful / Unhelpful]
     H -- Unhelpful --> I[Escalate & Re-assign to Senior Human Support Engineer]
     F -- No --> J[Routing Engine Assigns Ticket to Department & Employee]
@@ -110,12 +137,11 @@ graph TD
 ```
 
 **Step-by-step User Experience**:
-1. **Registration**: New users **self-register** with Full Name, Email, and Password on the Sign In / Create Account page. Registration always creates an **End-User** (Support Portal) account.
-2. **Login**: Returning users sign in with their email and password. Demo accounts available for quick access.
-3. **Submit Ticket**: Fill in the issue description in plain text.
-4. **Instant AI Analysis**: The LLM automatically extracts category (`Access`, `Billing`, `Server`, `DB`, `HR`, `Bug`, `Feature`), severity rating, and sentiment.
-5. **Auto-Resolution Check**: Common requests (password reset steps, leave policies, duplicate billing) receive instant resolution instructions.
-6. **Real-time Updates**: Track assigned employee status, active SLA countdowns, and chat directly with support agents.
+1. **Authentication**: New users self-register with Full Name, Email, and Password or sign in via **Google OAuth** / Demo Quick-Logins.
+2. **Submit Ticket**: Fill in the issue description in plain natural language.
+3. **Instant AI Analysis**: The LLM automatically extracts category (`Access`, `Billing`, `Server`, `DB`, `HR`, `Bug`, `Feature`), severity rating, and sentiment.
+4. **Auto-Resolution Check**: Common requests (password reset steps, leave policies, duplicate billing) receive instant resolution instructions grounded in SOP runbooks.
+5. **Real-time Updates**: Track assigned employee status, active SLA countdowns, and chat directly with support agents over WebSockets.
 
 ---
 
@@ -130,19 +156,18 @@ graph TD
     E2 --> F2[Check Real-Time SLA Countdown Badges: Breached / At Risk / On Track]
     F2 --> G2[Open Ticket Detail View]
     G2 --> H2[Inspect AI Triage: Category, Severity, Sentiment & Suggested Steps]
-    H2 --> I2[Click '✨ Generate AI Reply' for 1-Click Contextual Draft]
+    H2 --> I2[Click 'Generate AI Reply' for 1-Click Contextual Draft]
     I2 --> J2[Review, Edit & Send Response to Customer]
     J2 --> K2[Add Internal Staff Notes for Team Collaboration]
     K2 --> L2[Update Ticket Status to In Progress / Resolved / Closed]
 ```
 
 **Step-by-step Support Employee Experience**:
-1. **Account Creation**: Accounts are **created by the System Admin** in the Employee Directory. The admin sets the employee's email and login password.
-2. **Login**: Employee signs in using the email and password set by the admin — from the same login page, using the **Sign In** tab.
-3. **Work Queue Inspection**: View incoming tickets assigned based on skill matching and current workload.
-4. **SLA Countdown & Urgency**: Monitor color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
-5. **AI Smart Reply Assistant**: Click **"✨ Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
-6. **Customer Communication & Notes**: Publish replies, attach internal team notes, and manage ticket status (`In Progress`, `Pending Info`, `Resolved`, `Closed`).
+1. **Account Provisioning**: Created by the System Admin in the Employee Directory.
+2. **Work Queue Inspection**: View incoming tickets assigned based on skill matching and current workload.
+3. **SLA Countdown & Urgency**: Monitor color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
+4. **AI Smart Reply Assistant**: Click **"Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
+5. **Customer Communication & Notes**: Publish replies, attach internal team notes, and manage ticket status.
 
 ---
 
@@ -163,11 +188,10 @@ graph TD
 ```
 
 **Step-by-step System Admin Experience**:
-1. **Login**: Admin uses the pre-seeded demo credentials (`admin@gmail.com` / `admin123`) — there is no admin self-registration.
-2. **Employee Management**: Add support staff by filling in their Name, Email, Department, Skills, and **Login Password**. Employees then log in with those admin-set credentials.
-3. **Global Oversight**: Track tickets across all departments (Engineering, DevOps, IT, HR, Finance, Legal, Product).
-4. **Web UI Settings & Integrations**: In-browser configuration of Groq API Keys, LLM models, and Slack Webhooks with 1-click connection testing.
-5. **Data Reporting & Analytics**: Export filtered tickets into CSV spreadsheets and review Recharts metrics for SLA compliance and department trends.
+1. **Global Oversight**: Track tickets across all departments (Engineering, DevOps, IT, HR, Finance, Legal, Product).
+2. **Employee Directory Management**: Add/edit support staff, update skill tags, set availability, and balance ticket workloads.
+3. **Web UI Settings & Integrations**: In-browser configuration of Groq API Keys, LLM models, and Slack Webhooks with 1-click connection testing.
+4. **Data Reporting & Analytics**: Export filtered tickets into CSV spreadsheets and review Recharts metrics for SLA compliance and department trends.
 
 ---
 
@@ -176,9 +200,8 @@ graph TD
 | Layer | Technology | Description |
 |-------|-----------|-------------|
 | **Frontend Core** | React 18, Vite | Modular SPA architecture with hot-module reloading and responsive layouts |
-| **Motion & Animation** | Framer Motion 12 | Smooth layout animations, reactive hero mesh glow, tab pill spring physics (`layoutId`), and scroll reveals |
-| **Styling & Icons** | Tailwind CSS 3, Lucide Icons | Modern dark-mode glassmorphic design system (`backdrop-blur`) |
-| **Data Science & Analytics** | Recharts, SQLAlchemy Aggregations | Executive time-series trends (30-day ticket velocity), MTTR calculations, category distributions, and team load analytics |
+| **Motion & Design** | Framer Motion 12, Tailwind CSS 3, Lucide Icons | Modern dark-mode glassmorphic design system (`backdrop-blur`), animated illustrations, and micro-interactions |
+| **Data Visualization** | Recharts | Executive time-series trends (30-day ticket velocity), MTTR calculations, category distributions, and team load analytics |
 | **Backend API** | Python 3.10+, FastAPI | High-performance async REST API framework with Pydantic v2 validation |
 | **Database & ORM** | SQLite (dev) / PostgreSQL (prod), SQLAlchemy 2.0 | Zero-config SQLite locally; managed PostgreSQL in production via `DATABASE_URL` with `pool_pre_ping` |
 | **AI / LLM Engine** | Groq (`llama-3.3-70b-versatile`), Claude 3 Haiku | Multi-provider inference orchestration with fallback to deterministic rule matrix |
@@ -203,7 +226,11 @@ graph TD
 
 ```bash
 # Navigate to backend directory
-cd backend
+cd ai-ticketing-system/backend
+
+# (Optional) Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install Python dependencies
 pip install -r requirements.txt
@@ -221,7 +248,7 @@ uvicorn main:app --reload --port 8000
 
 ```bash
 # Navigate to frontend directory
-cd frontend
+cd ai-ticketing-system/frontend
 
 # Install Node dependencies
 npm install
@@ -229,7 +256,7 @@ npm install
 # Start Vite dev server
 npm run dev
 ```
-> Open **http://localhost:5173** in your browser.
+> Open **http://localhost:5173** (or the port reported by Vite) in your browser.
 
 ---
 
@@ -237,9 +264,9 @@ npm run dev
 
 You can configure integrations in **two ways**:
 
-1. **Via Web UI (Recommended)**: Click **"⚙️ Integrations & AI"** in the sidebar. Enter your Groq API key or Slack Webhook URL directly from your browser. Settings are saved securely to SQLite.
+1. **Via Web UI (Recommended)**: Click **"⚙️ Integrations & AI"** in the sidebar. Enter your Groq API key or Slack Webhook URL directly from your browser. Settings are saved securely in SQLite/PostgreSQL.
 2. **Via `.env` Files**:
-   - **Backend (`backend/.env`)**:
+   - **Backend (`ai-ticketing-system/backend/.env`)**:
      ```env
      SECRET_KEY=change-me-to-a-long-random-string   # REQUIRED in production
      ACCESS_TOKEN_EXPIRE_MINUTES=1440               # JWT expiry (24 h)
@@ -247,9 +274,10 @@ You can configure integrations in **two ways**:
      GROQ_API_KEY=gsk_your_groq_api_key_here
      SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T000/B000/XXXXX
      ```
-   - **Frontend (`frontend/.env`)**:
+   - **Frontend (`ai-ticketing-system/frontend/.env`)**:
      ```env
      VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+     VITE_API_URL=http://localhost:8000
      ```
 
 ---
@@ -274,19 +302,31 @@ You can configure integrations in **two ways**:
 | `employee@company.com` | `employee123` | employee |
 | `user@gmail.com` | `user123` | user |
 
-> ⚠️ For a real deployment: change these passwords immediately (or remove `_seed_demo_users()` from `main.py`) and set a strong `SECRET_KEY`.
+---
 
-### Deploying to Render
+## 🚀 One-Click Cloud Deployment (Render Blueprint)
 
-1. Push this repo to GitHub and create a **Blueprint** from `render.yaml`.
-2. Render provisions the FastAPI backend, the React static frontend, and a **managed PostgreSQL** database.
-3. In the Render dashboard set `SECRET_KEY` (generate with `python -c "import secrets; print(secrets.token_hex(32))"`), `GROQ_API_KEY`, and `ALLOWED_ORIGINS` (your frontend URL, e.g. `https://ai-ticketing-frontend.onrender.com`).
+This repository includes a ready-to-use [`render.yaml`](render.yaml) blueprint:
+
+1. **Push to GitHub**: Make sure your repo is pushed to GitHub.
+2. **New Blueprint on Render**: In your [Render Dashboard](https://dashboard.render.com/), click **New +** → **Blueprint**, and select your GitHub repo.
+3. **Automatic Provisioning**:
+   - `ai-ticketing-db`: Managed PostgreSQL database.
+   - `ai-ticketing-backend`: FastAPI Python Web Service running `alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT`.
+   - `ai-ticketing-frontend`: Vite static site deployed directly from `dist/`.
+4. **Environment Variables**:
+   - In Render backend settings, set `SECRET_KEY` to a random 64-char hex string:
+     ```bash
+     python -c "import secrets; print(secrets.token_hex(32))"
+     ```
+   - Add your `GROQ_API_KEY`.
+   - Set `ALLOWED_ORIGINS` to your frontend's Render URL (e.g. `https://ai-ticketing-frontend.onrender.com`).
 
 ---
 
 ## 📡 Complete API Endpoints Documentation
 
-Swagger Interactive API Docs: `http://localhost:8000/docs`
+Swagger Interactive API Docs: `http://localhost:8000/docs` (available in non-production environments).
 
 All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓. Role legend: 🔓 public · 👤 any authenticated user · 👩‍💻 employee/admin · 🛡️ admin only.
 
@@ -302,18 +342,28 @@ All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓
 ### 🎟️ Tickets (`/api/tickets`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/tickets/` | 👤 Create a new ticket (triggers AI analysis, auto-resolution check, & routing) |
+| `POST` | `/api/tickets/` | 👤 Create a new ticket (triggers AI analysis, PII scrub, auto-resolution check, & routing) |
 | `GET` | `/api/tickets/` | 👤 List tickets with filters (`status`, `department`, `severity`, `category`, `sla_status`, `search`) — end-users only see their own |
 | `GET` | `/api/tickets/{id}` | 👤 Get detailed ticket object with replies, notes, SLA status, and timeline |
 | `PATCH` | `/api/tickets/{id}/status` | 👩‍💻 Update ticket status (`New`, `Assigned`, `In Progress`, `Pending Info`, `Resolved`, `Closed`) |
 | `POST` | `/api/tickets/{id}/notes` | 👩‍💻 Add internal employee note to a ticket |
 | `POST` | `/api/tickets/{id}/replies` | 👤 Post reply — official replies restricted to admin or the assigned employee |
-| `POST` | `/api/tickets/{id}/generate-reply` | 👩‍💻 ✨ Generate AI draft reply using Groq LLM |
+| `POST` | `/api/tickets/{id}/generate-reply` | 👩‍💻 Generate AI draft reply using Groq LLM |
 | `GET` | `/api/tickets/{id}/timeline` | 👤 Fetch activity timeline events |
 | `POST` | `/api/tickets/{id}/feedback` | 👤 Submit user satisfaction feedback (`Helpful` / `Unhelpful`) |
 | `POST` | `/api/tickets/{id}/escalate` | 🛡️ Escalate ticket severity & trigger urgent Slack notification |
 | `POST` | `/api/tickets/check-escalations` | 🛡️ System timer check for overdue tickets |
 | `POST` | `/api/tickets/reset-seed` | 🛡️ 🔄 1-Click reset database back to initial seed dataset |
+
+### 📚 Knowledge Base & GenAI (`/api/knowledge`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/knowledge/articles` | 👤 List SOP runbooks and indexed vector knowledge articles |
+| `POST` | `/api/knowledge/articles` | 👩‍💻 Create, persist to DB, and index a new knowledge article |
+| `POST` | `/api/knowledge/query` | 👤 RAG semantic playground: Hybrid vector search + grounded answer |
+| `GET` | `/api/knowledge/incidents` | 👩‍💻 Real-time semantic clustering across active tickets for outages |
+| `GET` | `/api/knowledge/agent-trace/{id}` | 👩‍💻 Inspect autonomous ReAct agent loop diagnostic trace |
+| `POST` | `/api/knowledge/sanitize-pii` | 👤 Pre-flight PII redaction preview (Luhn verified) |
 
 ### ⚙️ System Settings (`/api/settings`)
 | Method | Endpoint | Description |
@@ -330,12 +380,15 @@ All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓
 | `PUT` | `/api/employees/{id}` | 🛡️ Update employee details, skills, or availability |
 | `DELETE` | `/api/employees/{id}` | 🛡️ Deactivate employee |
 
-### 📊 Analytics (`/api/analytics`)
+### 📊 Analytics & Governance (`/api/analytics`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/analytics/overview` | 👩‍💻 Executive KPI stats (total tickets, auto-resolved %, SLA compliance, resolution time) |
 | `GET` | `/api/analytics/department-load` | 👩‍💻 Department ticket distribution for charts |
 | `GET` | `/api/analytics/top-categories` | 👩‍💻 Top 5 ticket category breakdown |
+| `GET` | `/api/analytics/ai-audit-logs` | 🛡️ SOC-2 immutable AI audit trail: Latency, token burn, cost ($USD), PII flags |
+| `GET` | `/api/analytics/ai-evaluation` | 👩‍💻 RAG Triad scores, MTTR reduction, and A/B prompt experiment summary |
+| `POST` | `/api/analytics/run-benchmark` | 👩‍💻 Execute live 5-scenario evaluation benchmark suite |
 
 ### 🔌 WebSockets (`/ws`)
 | Protocol | Endpoint | Description |
@@ -344,140 +397,69 @@ All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓
 
 ---
 
-## 🧪 Example Test Tickets
-
-The system includes 10 pre-built test ticket scenarios (`backend/seed_data.py`):
-
-1. **Password reset request** → *Auto-Resolved by AI*
-2. **Server is completely down — URGENT** → *Assigned to DevOps (Critical Severity)*
-3. **Database query taking too long** → *Assigned to Engineering (Critical Severity)*
-4. **Leave policy inquiry** → *Auto-Resolved by AI*
-5. **Billing discrepancy** → *Auto-Resolved by AI*
-6. **Feature request: Dark mode** → *Assigned to Product*
-7. **Access permissions after role change** → *Assigned to IT Support (High Severity)*
-8. **Payroll calculation error** → *Assigned to Finance*
-9. **Application crash on CSV export** → *Assigned to Engineering*
-10. **Compliance review needed** → *Assigned to Legal*
-
----
-
-## 🚀 Key Modules & Feature Walkthrough
-
-### 1. 🔑 Authentication — JWT, RBAC & Google OAuth
-Email/password login issues **server-signed JWTs** (bcrypt-hashed passwords, 24 h expiry). Every API endpoint enforces **role-based access control** (`admin` / `employee` / `user`), end-users only see their own tickets, the login endpoint is rate-limited, and **Google OAuth** plus quick demo logins are supported.
-
-![Google OAuth & Login Interface](https://github.com/user-attachments/assets/73211743-dbb5-46fd-8b92-194c2a90b8a6)
-
-### 2. 🌐 Landing Page & Interactive AI Demo Modal
-Features a landing page highlighting AI automation capabilities and an interactive **Live AI Processing Simulation Modal**.
-
-### 3. ✍️ Ticket Intake & AI Triage (User Portal)
-Users submit issues in natural language. The AI immediately analyzes category, severity (`Critical`, `High`, `Medium`, `Low`), sentiment (`Frustrated`, `Polite`, `Neutral`), and confidence score.
-
-![AI Ticket Analysis](https://github.com/user-attachments/assets/886c7ee7-b181-4e05-be1f-872876fea964)
-
-### 4. ⚡ Auto-Resolution Engine
-For standard requests (password resets, leave policy FAQs, billing double-charges), the AI provides instant resolution steps with a user feedback loop (`Helpful` / `Unhelpful`).
-
-![Auto-Resolution Engine](https://github.com/user-attachments/assets/cbcf8b69-b60b-4006-9da8-88fa5e5641f3)
-
-### 5. 🔀 Intelligent Department & Employee Routing
-Complex issues are routed to departments (Engineering, DevOps, IT, HR, Finance, Legal, Product) and assigned to employees based on **skill tags**, **current ticket workload**, and **availability**.
-
-![Employee Matching & Directory](https://github.com/user-attachments/assets/4a12e923-d59b-463a-967c-bcc652c4e718)
-![Assignee Selection](https://github.com/user-attachments/assets/6ed46927-e18c-4d67-ae8c-a8d806f4b218)
-
-### 6. ⏱️ SLA Countdown & Status Badges
-Tracks strict Service Level Agreements based on severity:
-- `Critical`: 2 Hours
-- `High`: 6 Hours
-- `Medium`: 24 Hours
-- `Low`: 48 Hours
-Visual badges highlight tickets as **`SLA Met ✓`**, **`SLA On Track 💙`**, **`SLA < 1h ⏱️`**, or **`SLA Breached 🚨`**.
-
-### 7. ✨ AI Smart Reply Assistant
-Support agents can click **"✨ Generate AI Reply"** on any ticket detail page. The Groq LLM reads conversation context and crafts a professional draft response.
-
-### 8. ⚙️ Web UI Settings & Integration Manager
-In-browser modal to manage Groq API Keys, select LLM models, configure Slack Webhooks, test connections, or reset demo seed data.
-
-### 9. 📥 CSV Ticket Export
-Download filtered ticket datasets into formatted `.csv` spreadsheets with 1-click.
-
-### 10. 📊 Executive Analytics Dashboard
-Visualizes ticket volume trends, department workloads, category distributions, and SLA metrics via Recharts.
-
-![Analytics Dashboard](https://github.com/user-attachments/assets/a538e275-6534-472d-9f12-402662606025)
-
----
-
 ## 📂 Project Structure
 
 ```
-ai-ticketing-system/
-├── backend/
-│   ├── main.py                 # FastAPI application & WebSocket server
-│   ├── auth_utils.py           # JWT + bcrypt utilities & RBAC dependencies
-│   ├── limiter.py              # slowapi rate-limit configuration
-│   ├── database.py              # SQLAlchemy engine (SQLite/PostgreSQL) & Session
-│   ├── models.py                # ORM Database Models (User, Ticket, Employee, SystemSetting, etc.)
-│   ├── schemas.py               # Pydantic validation schemas
-│   ├── ai_service.py            # Groq LLM integration + Smart Offline Engine
-│   ├── routing_engine.py        # Rule-based department classification
-│   ├── assignee_engine.py       # Skill-matching & load-balancing algorithm
-│   ├── seed_data.py             # 15 seed employees & 10 demo scenario tickets
-│   ├── requirements.txt         # Python dependencies
-│   ├── alembic/                # Database migrations
-│   ├── tests/                  # Pytest suite (auth, RBAC, tickets)
-│   ├── .env.example             # Sample environment configuration
-│   └── routers/
-│       ├── auth.py             # Login, registration, profile & password endpoints
-│       ├── tickets.py           # Ticket CRUD, SLA tracking, AI reply & seed reset
-│       ├── settings.py          # System settings & Slack webhook verification
-│       ├── employees.py         # Employee directory CRUD
-│       └── analytics.py         # Dashboard analytics & charts
-├── frontend/
-│   ├── package.json             # React dependencies
-│   ├── vite.config.js           # Vite configuration
-│   ├── tailwind.config.js       # Tailwind CSS theme tokens
-│   ├── index.html               # Entry HTML
-│   └── src/
-│       ├── main.jsx             # React DOM root
-│       ├── App.jsx              # Navigation sidebar, router & layout
-│       ├── api.js               # Centralized REST API client
-│       ├── index.css            # Custom CSS & glassmorphic design system
-│       ├── components/
-│       │   ├── ResolvAiLogo.jsx       # SVG Brand Logo
-│       │   ├── HeroIllustration.jsx   # Animated SVG mesh illustration
-│       │   ├── PrimaryButton.jsx      # Reusable primary button component
-│       │   ├── SecondaryButton.jsx    # Reusable secondary button component
-│       │   ├── StatCard.jsx           # Metric highlight card
-│       │   ├── DocumentationModal.jsx # Architecture & runbook documentation modal
-│       │   ├── SettingsModal.jsx      # Web UI Integrations & Settings modal
-│       │   ├── DemoOverlayModal.jsx   # Interactive AI processing demo overlay
-│       │   └── TicketFlowGraph.jsx    # Interactive lifecycle graph
-│       └── pages/
-│           ├── LandingPage.jsx        # Public landing & feature showcase
-│           ├── LoginPage.jsx          # Auth, Google OAuth & Demo Quick-Logins
-│           ├── UserPortal.jsx         # User ticket submission & intake
-│           ├── MyTickets.jsx          # End-user ticket tracking
-│           ├── TicketList.jsx         # Support Agent / Admin ticket management & CSV export
-│           ├── TicketDetail.jsx       # Ticket conversation, AI Smart Reply & notes
-│           ├── EmployeeDirectory.jsx  # Employee directory & workload manager
-│           └── Analytics.jsx          # Recharts executive analytics dashboard
-└── README.md
+ai-QUERY/
+├── render.yaml                          # Infrastructure as code: Render 1-click blueprint
+├── README.md                            # Main project documentation & AI specs
+└── ai-ticketing-system/
+    ├── backend/
+    │   ├── main.py                      # FastAPI application & WebSocket server
+    │   ├── guardrails.py                # Enterprise PII scrub + Luhn verification
+    │   ├── rag_engine.py                # 384-D dense embeddings + BM25 sparse RRF
+    │   ├── agent_tools.py               # Autonomous ReAct agent loop & tool registry
+    │   ├── clustering_engine.py         # Semantic duplicate detection & outage clustering
+    │   ├── ai_service.py                # Groq LLM (LLaMA 3.3 70B) & fallback orchestrator
+    │   ├── auth_utils.py                # JWT + bcrypt security & RBAC dependencies
+    │   ├── routing_engine.py            # Department classification
+    │   ├── assignee_engine.py           # Skill-matching & load-balancing algorithm
+    │   ├── limiter.py                   # SlowAPI rate limiter
+    │   ├── database.py                  # SQLAlchemy engine (SQLite / PostgreSQL)
+    │   ├── models.py                    # ORM models (Users, Tickets, Employees, SOPs)
+    │   ├── schemas.py                   # Pydantic v2 validation schemas
+    │   ├── seed_data.py                 # Directory seeds & demo scenario tickets
+    │   ├── requirements.txt             # Python dependencies
+    │   ├── alembic/                     # Database migrations
+    │   └── tests/                       # Complete Pytest test suite (28 tests)
+    └── frontend/
+        ├── package.json                 # React dependencies
+        ├── vite.config.js               # Vite bundler configuration
+        ├── tailwind.config.js           # Tailwind CSS styling tokens
+        ├── index.html                   # HTML entry point
+        └── src/
+            ├── App.jsx                  # Navigation, routing & layout
+            ├── api.js                   # Centralized API client
+            ├── index.css                # Glassmorphic dark design system
+            ├── components/
+            │   ├── ResolvAiLogo.jsx     # Brand SVG logo
+            │   ├── HeroIllustration.jsx # Animated SVG mesh illustration
+            │   ├── PrimaryButton.jsx    # Accessible primary action button
+            │   ├── SecondaryButton.jsx  # Outlined action button
+            │   ├── StatCard.jsx         # Metric display card
+            │   ├── DocumentationModal.jsx # Runbook & architecture docs modal
+            │   └── SettingsModal.jsx    # In-browser integrations & config
+            └── pages/
+                ├── LandingPage.jsx      # High-conversion human-touch landing page
+                ├── LoginPage.jsx        # Auth & quick-demo switchers
+                ├── UserPortal.jsx       # Ticket submission & AI triage intake
+                ├── MyTickets.jsx        # End-user ticket tracking
+                ├── TicketList.jsx       # Staff ticket management & CSV export
+                ├── TicketDetail.jsx     # Live discussion & AI Smart Reply
+                ├── EmployeeDirectory.jsx# Staff skill-tag & workload manager
+                └── Analytics.jsx        # Recharts executive KPI dashboard
 ```
 
 ---
 
 ## 🧪 Testing
 
-The backend includes a comprehensive automated test suite covering authentication, RBAC authorization, PII guardrails, RAG, and WebSocket dispatches across 28 test cases.
+The backend includes a comprehensive automated test suite covering authentication, RBAC authorization, PII guardrails, RAG, AI evaluation, distributed WebSocket state, and persistent vector caches across 33 test cases.
 
-To run the suite:
+To run tests:
 
 ```bash
-cd backend
+cd ai-ticketing-system/backend
 
 # Activate virtual environment (if using venv):
 # Windows:       .venv\Scripts\activate
@@ -488,7 +470,15 @@ pytest tests/ -v
 ```
 
 ```
-============================= 28 passed in 1.60s ==============================
+tests/test_auth_api.py ......................... [ 18%]
+tests/test_employee_dashboard.py ............... [ 27%]
+tests/test_enterprise_suite.py ................. [ 36%]
+tests/test_genai_suite.py ...................... [ 60%]
+tests/test_rbac_security.py .................... [ 75%]
+tests/test_realtime.py ......................... [ 84%]
+tests/test_tickets_api.py ...................... [100%]
+
+============================= 33 passed in 2.44s ==============================
 ```
 
 ---

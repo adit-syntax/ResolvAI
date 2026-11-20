@@ -96,13 +96,23 @@ def get_current_user(
     )
     try:
         payload = decode_token(token)
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        user_id = payload.get("sub")
+        email_claim = payload.get("email")
+        if user_id is None and not email_claim:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = db.get(User, int(user_id))
+    user = None
+    if email_claim:
+        user = db.query(User).filter(User.email.ilike(email_claim)).first()
+
+    if not user and user_id is not None:
+        try:
+            user = db.get(User, int(user_id))
+        except (ValueError, TypeError):
+            user = None
+
     if user is None or not user.is_active:
         raise credentials_exception
     return user

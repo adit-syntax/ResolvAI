@@ -27,23 +27,23 @@ const DOC_SECTIONS = [
           <div className="text-neutral-400 font-semibold mb-1">Architecture Components:</div>
           <div className="flex items-start gap-2">
             <span className="text-[#22c55e] font-bold">•</span>
-            <span><strong className="text-white">Backend:</strong> Python FastAPI REST API with asynchronous request handling and background SLA monitoring loops.</span>
+            <span><strong className="text-white">Backend:</strong> Python FastAPI REST API with asynchronous request handling, SlowAPI rate limiting, and background SLA sweep loops.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-blue-400 font-bold">•</span>
-            <span><strong className="text-white">Database:</strong> SQLAlchemy ORM configured with local SQLite for development and PostgreSQL support for production.</span>
+            <span><strong className="text-white">Database &amp; Vector Store:</strong> SQLAlchemy ORM with persistent pgvector PostgreSQL support (production) and zero-config SQLite (local).</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-purple-400 font-bold">•</span>
-            <span><strong className="text-white">Real-Time Messaging:</strong> Full-duplex WebSocket bus for synchronized customer-agent communication.</span>
+            <span><strong className="text-white">Distributed Real-Time Bus:</strong> WebSocket synchronizer with Redis Pub/Sub cross-pod event broadcasting.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold">•</span>
+            <span><strong className="text-white">SOC-2 AI Governance:</strong> Immutable telemetry tracking model latency, token burn, cost ($USD), and PII redactions.</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-amber-400 font-bold">•</span>
-            <span><strong className="text-white">Frontend:</strong> React 18 SPA built with Vite, TailwindCSS, and client-side JWT authorization.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-emerald-400 font-bold">•</span>
-            <span><strong className="text-white">Knowledge Engine:</strong> Vector embedding index with hybrid BM25 search for matching standard operating procedures (SOPs).</span>
+            <span><strong className="text-white">Frontend:</strong> React 18 SPA built with Vite, TailwindCSS, route-level code splitting, and client-side JWT authorization.</span>
           </div>
         </div>
 
@@ -189,6 +189,49 @@ const DOC_SECTIONS = [
     ),
   },
   {
+    id: 'enterprise',
+    title: 'Enterprise Scale & Production',
+    icon: Terminal,
+    content: (
+      <div className="space-y-4 text-xs text-neutral-300 leading-relaxed">
+        <h4 className="text-sm font-bold text-white">Enterprise High-Concurrency Stack</h4>
+        <p>
+          ResolvAI is architected for zero-downtime multi-node deployments across containerized clouds:
+        </p>
+
+        <div className="space-y-3 font-mono text-[11px]">
+          <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800">
+            <div className="text-purple-400 font-bold mb-1">1. Distributed Redis Pub/Sub Synchronization</div>
+            <div className="text-neutral-400">
+              When scaling to multiple Uvicorn workers or Kubernetes pods, <code>realtime.py</code> utilizes Redis Pub/Sub (<code>resolvai:realtime:events</code>) to broadcast ticket updates across all cluster replicas.
+            </div>
+          </div>
+
+          <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800">
+            <div className="text-cyan-400 font-bold mb-1">2. Persistent pgvector Database Storage</div>
+            <div className="text-neutral-400">
+              Knowledge base runbooks and their 384-dimensional dense vectors persist in PostgreSQL via <code>KnowledgeArticle</code> and native <code>pgvector</code> extension, with automatic startup cache warming.
+            </div>
+          </div>
+
+          <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800">
+            <div className="text-emerald-400 font-bold mb-1">3. SOC-2 AI Governance &amp; Cost Telemetry</div>
+            <div className="text-neutral-400">
+              Every AI operation creates an immutable <code>AIAuditLog</code> capturing model used, latency (ms), token consumption, dollar cost estimations, and PII safety intercepts viewable at <code>/api/analytics/ai-audit-logs</code>.
+            </div>
+          </div>
+
+          <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800">
+            <div className="text-amber-400 font-bold mb-1">4. 1-Command Docker Compose Deployment</div>
+            <div className="text-neutral-400">
+              Run the full production fleet (PostgreSQL with pgvector, Redis 7, FastAPI backend, and Nginx frontend reverse proxy) with <code>docker compose up</code>.
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
     id: 'api',
     title: 'API Endpoints Reference',
     icon: Code2,
@@ -221,6 +264,10 @@ const DOC_SECTIONS = [
             <span className="text-neutral-500">Live ticket chat bus</span>
           </div>
           <div className="bg-neutral-950 p-2.5 rounded-lg border border-neutral-800 flex items-center justify-between">
+            <span><strong className="text-cyan-400">GET</strong> /api/analytics/ai-audit-logs</span>
+            <span className="text-neutral-500">SOC-2 AI cost &amp; audit</span>
+          </div>
+          <div className="bg-neutral-950 p-2.5 rounded-lg border border-neutral-800 flex items-center justify-between">
             <span><strong className="text-blue-400">GET</strong> /api/analytics/overview</span>
             <span className="text-neutral-500">Team health &amp; metrics</span>
           </div>
@@ -249,9 +296,6 @@ export default function DocumentationModal({ isOpen, onClose }) {
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 ResolvAI Documentation
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
-                  v1.0
-                </span>
               </h3>
               <p className="text-[11px] text-neutral-400">System architecture, roles, triage logic, and API reference</p>
             </div>

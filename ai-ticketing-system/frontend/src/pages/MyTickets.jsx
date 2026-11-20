@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Search, Sparkles, Clock, CheckCircle2, Loader2,
+  Search, Bot, Activity, Clock, CheckCircle2, Loader2,
   ChevronDown, ChevronUp, Inbox, Mail, AlertTriangle,
   MessageSquare, Send, Check, Users
 } from 'lucide-react';
@@ -198,7 +198,7 @@ export default function MyTickets() {
                   <h3 className="text-xl font-semibold text-white mb-2">{ticket.title}</h3>
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
                     <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {formatDateExact(ticket.created_at)}</span>
-                    <span className="flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-primary-400" /> Est. {ticket.estimated_resolution_time || 'N/A'}</span>
+                    <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-primary-400" /> Est. {ticket.estimated_resolution_time || 'N/A'}</span>
                   </div>
                 </div>
                 {expandedId === ticket.id ? <ChevronUp className="w-6 h-6 text-gray-500" /> : <ChevronDown className="w-6 h-6 text-gray-400" />}
@@ -218,7 +218,7 @@ export default function MyTickets() {
                   {ticket.auto_resolved && ticket.auto_response && (
                     <div className="flex gap-4">
                       <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0 mt-1">
-                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        <Bot className="w-4 h-4 text-emerald-400" />
                       </div>
                       <div className="glass-card p-5 border-emerald-500/20 bg-emerald-500/5 flex-1 relative group">
                         <h4 className="text-sm font-semibold text-emerald-400 mb-1">AI Assistant Response</h4>

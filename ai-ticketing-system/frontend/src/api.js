@@ -79,11 +79,13 @@ async function request(url, options = {}) {
     );
   }
 
-  // Token expired or invalid — log out and reload
+  // Token expired, missing, or unauthorized — clear invalid token and throw so caller catches it
   if (response.status === 401) {
-    clearAuthToken();
-    window.location.reload();
-    return;
+    if (token) {
+      clearAuthToken();
+    }
+    const error = await response.json().catch(() => ({ detail: 'Unauthorized' }));
+    throw new Error(error.detail || 'Unauthorized');
   }
 
   if (!response.ok) {
@@ -183,6 +185,9 @@ export const analyticsApi = {
   severityDistribution: () => request('/analytics/severity-distribution'),
   resolutionTrend: () => request('/analytics/resolution-trend'),
   employeePerformance: () => request('/analytics/employee-performance'),
+  aiEvaluation: () => request('/analytics/ai-evaluation'),
+  runBenchmark: () => request('/analytics/run-benchmark', { method: 'POST' }),
+  getAIAuditLogs: (limit = 50) => request(`/analytics/ai-audit-logs?limit=${limit}`),
 };
 
 // ─── Settings & Integrations ─────────────────────────────────────────────────

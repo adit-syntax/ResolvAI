@@ -26,6 +26,19 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+def init_extensions():
+    """Enable PostgreSQL extensions such as pgvector if supported."""
+    if not DATABASE_URL.startswith("sqlite"):
+        from sqlalchemy import text
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+                conn.commit()
+                print("[Database] pgvector extension verified / initialized.")
+        except Exception as e:
+            print(f"[Database] pgvector initialization notice: {e}")
+
+
 def get_db():
     """Dependency that provides a database session per request."""
     db = SessionLocal()

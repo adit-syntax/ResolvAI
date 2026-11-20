@@ -234,3 +234,39 @@ class SystemSetting(Base):
     value = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
+
+class KnowledgeArticle(Base):
+    """Persistent storage for RAG enterprise runbooks & vector embeddings."""
+    __tablename__ = "knowledge_articles"
+
+    id = Column(String(50), primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    category = Column(String(50), nullable=False, index=True)
+    tags = Column(Text, default="")
+    content = Column(Text, nullable=False)
+    embedding_json = Column(Text, nullable=True)  # JSON-serialized dense float vector
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
+
+
+class AIAuditLog(Base):
+    """SOC-2 compliant permanent audit log for all AI operations, token consumption, and safety decisions."""
+    __tablename__ = "ai_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=True, index=True)
+    operation = Column(String(50), nullable=False, index=True)  # triage, draft_reply, rag_search, benchmark
+    model_used = Column(String(80), nullable=False, index=True) # llama-3.3-70b-versatile, claude-3-haiku, deterministic-rules
+    latency_ms = Column(Float, default=0.0)
+    prompt_tokens = Column(Integer, default=0)
+    completion_tokens = Column(Integer, default=0)
+    total_tokens = Column(Integer, default=0)
+    estimated_cost_usd = Column(Float, default=0.0)
+    pii_detected = Column(Boolean, default=False)
+    pii_entities_count = Column(Integer, default=0)
+    rag_citation = Column(String(100), nullable=True)
+    confidence_score = Column(Float, nullable=True)
+    decision_outcome = Column(String(50), nullable=True)  # auto_resolved, assigned_to_dept, escalated
+    created_at = Column(DateTime, default=now_ist, index=True)
+

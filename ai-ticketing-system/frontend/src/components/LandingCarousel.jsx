@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Sparkles, Bot, Zap, ShieldCheck, MessageSquare, BarChart3,
+  Cpu, Bot, Zap, ShieldCheck, MessageSquare, BarChart3,
   ChevronLeft, ChevronRight, Play, ExternalLink, CheckCircle2, ArrowRight
 } from 'lucide-react';
 
@@ -15,7 +15,7 @@ const CAROUSEL_SLIDES = [
     title: 'Automated Ticket Triage & Categorization',
     subtitle: 'Zero manual categorization required',
     description: 'When a ticket is submitted, ResolvAI analyzes the description to detect intent, assign categories (Billing, Access, Server, HR), and determine priority level.',
-    icon: Sparkles,
+    icon: Cpu,
     gradient: 'from-emerald-500/10 to-green-500/5',
     accentColor: 'text-[#22c55e]',
     borderColor: 'border-[#22c55e]/30',

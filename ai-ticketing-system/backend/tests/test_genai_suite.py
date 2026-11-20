@@ -138,3 +138,28 @@ async def test_knowledge_api_endpoints(async_client, employee_auth_headers):
     )
     assert pii_res.status_code == 200
     assert "[REDACTED_SECRET_KEY]" in pii_res.json()["sanitized_text"]
+
+
+def test_ai_evaluation_framework():
+    """Verify automated AI evaluation metrics, groundedness scoring, and benchmarks."""
+    from evaluation_engine import evaluation_engine
+
+    # 1. Groundedness test
+    answer = "Based on our verified knowledge base documentation, run kubectl rollout restart deployment/api-gateway"
+    source = ["Check ingress pod health via kubectl rollout restart deployment/api-gateway"]
+    g_score = evaluation_engine.evaluate_groundedness(answer, source)
+    assert g_score >= 0.70
+
+    # 2. Executive Product Metrics Summary
+    summary = evaluation_engine.get_product_metrics_summary()
+    assert summary["groundedness_score"] > 90.0
+    assert summary["hallucination_rate"] < 1.0
+    assert "ab_testing" in summary
+    assert summary["ab_testing"]["variant_b"]["is_winner"] is True
+
+    # 3. 5-Scenario Benchmark Test Suite
+    bench = evaluation_engine.run_benchmark_suite()
+    assert bench["total_tests"] == 5
+    assert bench["pass_rate"] >= 80.0
+    assert bench["avg_groundedness_score"] > 0.75
+

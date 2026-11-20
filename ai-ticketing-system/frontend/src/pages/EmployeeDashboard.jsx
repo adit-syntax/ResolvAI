@@ -11,7 +11,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  Briefcase, CheckCircle2, Clock, AlertTriangle, AlertCircle, Sparkles,
+  Briefcase, CheckCircle2, Clock, AlertTriangle, AlertCircle,
   RefreshCw, Search, Filter, MessageSquare, ArrowUpRight, User, ShieldCheck,
   BarChart3, Zap, Send, SlidersHorizontal, ChevronRight, Check, X,
   TrendingUp, Activity, Inbox, ChevronDown, CheckCircle, Flame, HeartHandshake,

@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: resolvai-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: resolvai
+      POSTGRES_USER: resolvai
+      POSTGRES_PASSWORD: resolvai_secure_password_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resolvai -d resolvai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: resolvai-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./ai-ticketing-system/backend
+      dockerfile: Dockerfile
+    container_name: resolvai-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://resolvai:resolvai_secure_password_2026@postgres:5432/resolvai
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: production
+      JWT_SECRET_KEY: enterprise_jwt_secret_key_prod_resolvai_super_secure_32ch
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./ai-ticketing-system/frontend
+      dockerfile: Dockerfile
+    container_name: resolvai-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "5173:80"
+
+volumes:
+  postgres_data:
+  redis_data:

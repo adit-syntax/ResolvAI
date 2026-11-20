@@ -3,35 +3,89 @@
  * Roles: 'user' → Support Portal | 'admin' → Admin Dashboard
  */
 
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import {
   Headphones, ListTodo, Users, BarChart3, LayoutDashboard,
   Menu, CircleDot, LogOut, User, ShieldCheck, FileText, Settings,
-  X, UserCheck, Shield, Sparkles, BookOpen
+  X, UserCheck, Shield, BookOpen, Loader2, AlertCircle
 } from 'lucide-react';
-import { getAuthToken, setAuthToken, clearAuthToken, decodeJwtPayload } from './api.js';
+import { authApi, getAuthToken, setAuthToken, clearAuthToken, decodeJwtPayload } from './api.js';
 
-// Components & Pages
+// Core UI components
 import ResolvAiLogo from './components/ResolvAiLogo.jsx';
 import SettingsModal from './components/SettingsModal.jsx';
-import LandingPage from './pages/LandingPage.jsx';
-import LoginPage from './pages/LoginPage.jsx';
-import UserPortal from './pages/UserPortal.jsx';
-import TicketList from './pages/TicketList.jsx';
-import TicketDetail from './pages/TicketDetail.jsx';
-import EmployeeDirectory from './pages/EmployeeDirectory.jsx';
-import EmployeeDashboard from './pages/EmployeeDashboard.jsx';
-import Analytics from './pages/Analytics.jsx';
-import KnowledgeBase from './pages/KnowledgeBase.jsx';
 import IncidentAlertBanner from './components/IncidentAlertBanner.jsx';
+
+// Lazy-loaded route pages for on-demand bundle delivery
+const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
+const UserPortal = lazy(() => import('./pages/UserPortal.jsx'));
+const TicketList = lazy(() => import('./pages/TicketList.jsx'));
+const TicketDetail = lazy(() => import('./pages/TicketDetail.jsx'));
+const EmployeeDirectory = lazy(() => import('./pages/EmployeeDirectory.jsx'));
+const EmployeeDashboard = lazy(() => import('./pages/EmployeeDashboard.jsx'));
+const Analytics = lazy(() => import('./pages/Analytics.jsx'));
+const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase.jsx'));
+
+function PageFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3" role="status" aria-live="polite">
+      <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+      <span className="text-xs text-neutral-400 font-mono">Loading module…</span>
+    </div>
+  );
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 text-red-400">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+          <p className="text-xs text-neutral-400 max-w-md mb-6 font-mono">
+            {this.state.error?.message || 'An unexpected rendering error occurred.'}
+          </p>
+          <div className="flex items-center gap-3">
+            <a
+              href="/"
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors"
+            >
+              Back to Home
+            </a>
+            <button
+              onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+              className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold transition-colors"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── Navigation Items (role-gated) ────────────────────────
 
 const userNavItems = [
   { path: '/', icon: Headphones, label: 'Support Portal' },
   { path: '/my-tickets', icon: FileText, label: 'My Tickets' },
+  { path: '/analytics', icon: BarChart3, label: 'Analytics & SLAs' },
 ];
 
 const employeeNavItems = [
@@ -267,6 +321,56 @@ function loadAuth() {
 }
 
 
+function PublicAnalyticsPage({ onLogin }) {
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  const handleAdminSignIn = async () => {
+    setLoggingIn(true);
+    try {
+      const data = await authApi.login('admin@resolvai.com', 'admin123');
+      onLogin({ role: data.role, email: data.email, name: data.name }, data.access_token);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0f0f0f] text-white">
+      {/* Top Banner for unauthenticated visitors */}
+      <header className="sticky top-0 z-40 bg-[#141416]/95 backdrop-blur border-b border-white/[0.08] px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <ResolvAiLogo variant="icon" className="w-7 h-7" />
+            <span className="text-sm font-bold tracking-tight">ResolvAI</span>
+          </Link>
+          <span className="text-neutral-600 hidden sm:inline">/</span>
+          <span className="text-xs text-neutral-400 font-mono hidden sm:inline">Executive Analytics &amp; AI Quality Hub (Demo Mode)</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link to="/" className="text-xs text-neutral-400 hover:text-white transition-colors">
+            ← Back to Home
+          </Link>
+          <button
+            onClick={handleAdminSignIn}
+            disabled={loggingIn}
+            className="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+          >
+            {loggingIn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+            <span>Sign in as Admin (1-Click)</span>
+          </button>
+        </div>
+      </header>
+
+      <main className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <Analytics />
+      </main>
+    </div>
+  );
+}
+
+
 // ─── App ─────────────────────────────────────────────────
 
 export default function App() {
@@ -292,45 +396,53 @@ export default function App() {
   };
 
   const appContent = (
-    <Router>
-      {!auth ? (
-        <LandingPage onLogin={handleLogin} />
-      ) : (
-        <Layout role={auth.role} email={auth.email} onLogout={handleLogout}>
-          <Routes>
-            {auth.role === 'admin' ? (
-              /* ── Admin routes ── */
-              <>
-                <Route path="/tickets" element={<TicketList />} />
-                <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
-                <Route path="/employees" element={<EmployeeDirectory />} />
-                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} currentUser={auth} />} />
-                <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="*" element={<Navigate to="/tickets" replace />} />
-              </>
-            ) : auth.role === 'employee' ? (
-              /* ── Employee routes ── */
-              <>
-                <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} currentUser={auth} />} />
-                <Route path="/tickets" element={<TicketList />} />
-                <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
-                <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="*" element={<Navigate to="/employee-dashboard" replace />} />
-              </>
-            ) : (
-              /* ── User routes ── */
-              <>
-                <Route path="/" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
-                <Route path="/my-tickets" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </>
-            )}
-          </Routes>
-        </Layout>
-      )}
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <Suspense fallback={<PageFallback />}>
+          {!auth ? (
+            <Routes>
+              <Route path="/analytics" element={<PublicAnalyticsPage onLogin={handleLogin} />} />
+              <Route path="*" element={<LandingPage onLogin={handleLogin} />} />
+            </Routes>
+          ) : (
+            <Layout role={auth.role} email={auth.email} onLogout={handleLogout}>
+              <Routes>
+                {auth.role === 'admin' ? (
+                  /* ── Admin routes ── */
+                  <>
+                    <Route path="/tickets" element={<TicketList />} />
+                    <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
+                    <Route path="/employees" element={<EmployeeDirectory />} />
+                    <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} currentUser={auth} />} />
+                    <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="*" element={<Navigate to="/tickets" replace />} />
+                  </>
+                ) : auth.role === 'employee' ? (
+                  /* ── Employee routes ── */
+                  <>
+                    <Route path="/employee-dashboard" element={<EmployeeDashboard userEmail={auth.email} currentUser={auth} />} />
+                    <Route path="/tickets" element={<TicketList />} />
+                    <Route path="/tickets/:id" element={<TicketDetail role={auth.role} userEmail={auth.email} />} />
+                    <Route path="/knowledge" element={<KnowledgeBase user={auth} />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="*" element={<Navigate to="/employee-dashboard" replace />} />
+                  </>
+                ) : (
+                  /* ── User routes ── */
+                  <>
+                    <Route path="/" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
+                    <Route path="/my-tickets" element={<UserPortal userEmail={auth.email} onLogout={handleLogout} onUpdateEmail={handleUpdateEmail} />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </>
+                )}
+              </Routes>
+            </Layout>
+          )}
+        </Suspense>
+      </Router>
+    </ErrorBoundary>
   );
 
   if (googleClientId) {

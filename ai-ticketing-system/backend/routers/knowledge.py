@@ -52,9 +52,43 @@ def list_articles():
 
 
 @router.post("/articles", status_code=201)
-def create_article(data: ArticleCreate, current_user=Depends(require_employee_or_admin)):
-    """Add a new article and immediately re-index vector & BM25 embeddings."""
+def create_article(
+    data: ArticleCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_employee_or_admin)
+):
+    """Add a new article, persist to DB, and immediately re-index vector & BM25 embeddings."""
+    import json
+    from models import KnowledgeArticle
+    from rag_engine import DenseEmbedder
+
     art_id = data.id or f"KB-CUSTOM-{len(rag_engine.articles)+1:03d}"
+    tags_str = ",".join(data.tags)
+    full_text = f"{data.title.strip()}\nCategory: {data.category}\nTags: {tags_str}\n{data.content.strip()}"
+    vec = DenseEmbedder.embed_text(full_text)
+
+    # Persist in DB
+    existing_row = db.query(KnowledgeArticle).filter(KnowledgeArticle.id == art_id).first()
+    if existing_row:
+        existing_row.title = data.title.strip()
+        existing_row.category = data.category
+        existing_row.tags = tags_str
+        existing_row.content = data.content.strip()
+        existing_row.embedding_json = json.dumps(vec)
+        existing_row.is_active = True
+    else:
+        new_row = KnowledgeArticle(
+            id=art_id,
+            title=data.title.strip(),
+            category=data.category,
+            tags=tags_str,
+            content=data.content.strip(),
+            embedding_json=json.dumps(vec),
+            is_active=True,
+        )
+        db.add(new_row)
+    db.commit()
+
     new_article = {
         "id": art_id,
         "title": data.title.strip(),

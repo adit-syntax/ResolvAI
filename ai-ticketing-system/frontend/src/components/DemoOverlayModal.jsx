@@ -4,8 +4,8 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  X, Sparkles, CheckCircle2, Bot, ArrowRight, ShieldCheck,
-  Zap, Clock, User, AlertTriangle, Play, RefreshCw, ThumbsUp
+  X, Cpu, CheckCircle2, Bot, ArrowRight, ShieldCheck,
+  Zap, Clock, User, AlertTriangle, Play, RefreshCw, ThumbsUp, Activity
 } from 'lucide-react';
 
 const DEMO_SCENARIOS = [
@@ -112,18 +112,18 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#222222] bg-[#141414]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/30 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-[#22c55e]" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Live AI Triage Simulation</h3>
-              <p className="text-[11px] text-neutral-400">Interactive preview of ResolvAI autonomous processing</p>
+              <h3 className="text-sm font-semibold text-white tracking-tight">Autonomous Triage Trace</h3>
+              <p className="text-[11px] text-neutral-400 font-mono">Deterministic classification &amp; policy routing preview</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-all"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
             title="Close overlay"
           >
             <X className="w-5 h-5" />
@@ -136,10 +136,10 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
             <button
               key={sc.id}
               onClick={() => setSelectedId(sc.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs transition-colors font-medium whitespace-nowrap ${
                 selectedId === sc.id
-                  ? 'bg-[#22c55e]/20 border border-[#22c55e]/40 text-[#22c55e]'
-                  : 'bg-[#171717] border border-[#2a2a2a] text-neutral-400 hover:text-white'
+                  ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-400'
+                  : 'bg-[#171717] border border-[#2a2a2a] text-neutral-400 hover:text-white hover:border-neutral-700'
               }`}
             >
               {sc.title}
@@ -163,14 +163,14 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
             </p>
           </div>
 
-          {/* Step 2: AI Analysis */}
-          <div className={`p-4 rounded-xl border transition-all duration-300 ${step >= 2 ? 'bg-[#22c55e]/5 border-[#22c55e]/30 shadow-lg shadow-[#22c55e]/5' : 'opacity-30 border-transparent'}`}>
+          {/* Step 2: Triage & Extraction */}
+          <div className={`p-4 rounded-xl border transition-all duration-300 ${step >= 2 ? 'bg-[#161616] border-emerald-500/30' : 'opacity-30 border-transparent'}`}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#22c55e] flex items-center gap-1.5 font-bold">
-                <Sparkles className="w-3 h-3 animate-spin" /> Step 2 · Autonomous AI Extraction
+              <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 flex items-center gap-1.5 font-semibold">
+                <Cpu className="w-3.5 h-3.5 text-emerald-400" /> Step 2 · Triage &amp; Metadata Extraction
               </span>
               {step >= 2 && (
-                <span className="text-[10px] text-[#22c55e] font-mono font-semibold bg-[#22c55e]/10 px-2 py-0.5 rounded-full border border-[#22c55e]/20">
+                <span className="text-[10px] text-emerald-400 font-mono font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                   Verified
                 </span>
               )}
@@ -194,11 +194,11 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
                 </div>
                 <div className="bg-[#0f0f0f] p-2.5 rounded-lg border border-[#262626]">
                   <span className="text-[10px] text-neutral-500 block">Action Path</span>
-                  <span className="font-semibold text-[#22c55e] truncate block">{scenario.action}</span>
+                  <span className="font-semibold text-emerald-400 truncate block">{scenario.action}</span>
                 </div>
               </div>
             ) : (
-              <div className="h-10 flex items-center justify-center text-xs text-neutral-600">Analyzing text context...</div>
+              <div className="h-10 flex items-center justify-center text-xs text-neutral-600 font-mono">Analyzing payload...</div>
             )}
           </div>
 
@@ -206,32 +206,32 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
           <div className={`p-4 rounded-xl border transition-all duration-300 ${step >= 3 ? 'bg-[#161616] border-[#2a2a2a]' : 'opacity-30 border-transparent'}`}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] uppercase font-mono tracking-wider text-neutral-400 flex items-center gap-1.5">
-                <Bot className="w-3 h-3 text-[#22c55e]" /> Step 3 · Executed Action &amp; Output
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Step 3 · Policy Action &amp; Routing Output
               </span>
               <span className="text-[10px] text-neutral-500 font-mono">Completed</span>
             </div>
 
             {step >= 3 ? (
               <div className="bg-[#0d0d0d] p-3 rounded-lg border border-[#222222] space-y-2">
-                <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">AI Generated Answer / Assignment:</p>
-                <p className="text-xs text-neutral-200 leading-relaxed">{scenario.response}</p>
+                <p className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Deterministic Response / Assignment:</p>
+                <p className="text-xs text-neutral-200 leading-relaxed font-sans">{scenario.response}</p>
               </div>
             ) : (
-              <div className="h-10 flex items-center justify-center text-xs text-neutral-600">Executing action...</div>
+              <div className="h-10 flex items-center justify-center text-xs text-neutral-600 font-mono">Executing action...</div>
             )}
           </div>
 
           {/* Step 4: Completion */}
           {step >= 4 && (
-            <div className="p-4 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/30 flex items-center justify-between text-xs text-[#22c55e] font-semibold animate-fade-in">
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-400 font-medium">
               <span className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" /> Ticket processed successfully
+                <CheckCircle2 className="w-4 h-4" /> Ticket pipeline execution succeeded (200 OK)
               </span>
               <button
                 onClick={runSimulation}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#22c55e]/20 hover:bg-[#22c55e]/30 text-[#22c55e] transition-all text-xs"
+                className="flex items-center gap-1.5 px-3 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors text-xs font-mono"
               >
-                <RefreshCw className="w-3 h-3" /> Re-run Demo
+                <RefreshCw className="w-3 h-3" /> Re-run Trace
               </button>
             </div>
           )}
@@ -240,12 +240,12 @@ export default function DemoOverlayModal({ initialScenario = 'ai-triage', onClos
 
         {/* Footer */}
         <div className="p-4 bg-[#141414] border-t border-[#222222] flex items-center justify-between">
-          <p className="text-xs text-neutral-500">ResolvAI Triage Simulator · Zero manual overhead</p>
+          <p className="text-xs text-neutral-400 font-mono">Telemetry Status: Active · Benchmark Latency: 1.2s</p>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold text-xs transition-all shadow-md active:scale-95"
+            className="px-4 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 font-medium text-xs transition-colors"
           >
-            Close Interactive Overlay
+            Close Simulation
           </button>
         </div>
 

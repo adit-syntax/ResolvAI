@@ -313,7 +313,7 @@ async def create_ticket(
 
     # Step 2: AI Analysis
     ai_result = await analyze_ticket(
-        title, ticket_data.description, user_email
+        title, ticket_data.description, user_email, db=db, ticket_id=ticket.id
     )
 
     # Store AI analysis on the ticket

@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, Clock, Loader2, RefreshCw, MessageSquare,
   X, Send, ChevronRight, User, Tag, Inbox, SlidersHorizontal,
-  Sparkles, AlertTriangle, Download
+  AlertTriangle, Download
 } from 'lucide-react';
 import { ticketApi } from '../api.js';
 

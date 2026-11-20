@@ -1,13 +1,14 @@
-# 🤖 ResolvAI — Autonomous AI-Native Helpdesk & Incident Orchestration Platform
 
-[![Backend Tests](https://img.shields.io/badge/pytest-28%20passed%20%7C%20100%25-brightgreen.svg)](#-testing)
+# 🤖 ResolvAI — Autonomous AI-Native Helpdesk & Incident Orchestration Platform
+[![Backend Tests](https://img.shields.io/badge/pytest-33%20passed%20%7C%20100%25-brightgreen.svg)](#-testing)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18.x-61DAFB.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-5.x-646CFF.svg)](https://vitejs.dev/)
-[![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
+[![License](https://img.shields.io/badge/License-Open%20Source-purple.svg)](LICENSE)
 
-> **ResolvAI** is a production-grade, AI-native internal helpdesk and workload orchestration platform. Built for modern enterprise engineering and IT teams, it combines an **Autonomous ReAct Agent Loop**, a **Hybrid Vector RAG Engine** (Dense Cosine Similarity + BM25 Reciprocal Rank Fusion), **Enterprise PII Guardrails** with Luhn verification, **Semantic Duplicate Detection & Outage Clustering**, and dynamic **Workload-Aware Ticket Routing** with a sleek, human-touch React 18 frontend and WebSocket chat bus.
+> **ResolvAI** is a production-grade, AI-native internal helpdesk and workload orchestration platform. Built for modern enterprise engineering and IT teams, it combines an **Autonomous ReAct Agent Loop**, a **Hybrid Vector RAG Engine** (Dense Cosine Similarity + BM25 Reciprocal Rank Fusion) with **PostgreSQL pgvector persistence**, **Enterprise PII Guardrails** with Luhn verification, an **Automated AI Evaluation Framework** (Groundedness, Context Relevance & Benchmarking), **Distributed Real-Time State via Redis Pub/Sub**, **SOC-2 AI Cost & Audit Governance**, **Semantic Outage Clustering**, and dynamic **Workload-Aware Ticket Routing** with a clean React 18 SPA (29 kB entry bundle) and WebSocket chat bus.
 
 ---
 
@@ -16,8 +17,8 @@
 ```
                                   +---------------------------------------+
                                   |         Web Frontend (React 18)       |
-                                  | (Modern Landing, User Portal,         |
-                                  |  Admin Dashboard, Analytics & Live WS)|
+                                  | (Clean Runbook UI, User Portal, Staff |
+                                  |  Workspace, Analytics & Live WS Chat) |
                                   +-------------------+-------------------+
                                                       |
                                            HTTP REST / WebSocket
@@ -26,7 +27,7 @@
                                   +---------------------------------------+
                                   |         Backend API (FastAPI)         |
                                   | (Auth, RBAC, SlowAPI Rate Limiter,    |
-                                  |  Async Background SLA Automation)     |
+                                  |  Async Background SLA Sweep Engine)   |
                                   +---------+-------------------+---------+
                                             |                   |
                      +----------------------+                   +-----------------------+
@@ -43,8 +44,9 @@
                      |                                                                 |
                      v                                                                 v
     +---------------------------------+                               +----------------------------------+
-    |    Database & Persistence       |                               |      External Dispatches         |
-    |  - PostgreSQL (prod) / SQLite   |                               |  - Real-time WebSockets (`/ws`)  |
+    |    Database & Distributed Bus   |                               |      External Dispatches         |
+    |  - PostgreSQL with pgvector     |                               |  - Distributed Redis Pub/Sub     |
+    |  - SOC-2 AI Audit Log Storage   |                               |  - Real-time WebSockets (`/ws`)  |
     |  - Alembic Schema Migrations    |                               |  - Slack Incident Alert Cards    |
     +---------------------------------+                               +----------------------------------+
 ```
@@ -85,6 +87,30 @@ ResolvAI implements five foundational AI engineering modules tailored for produc
 - **Time-Series Incident Velocity**: Tracks 30-day creation vs. resolution volume trends for forecasting staffing needs and identifying bottlenecks.
 - **Operational SLA & MTTR Metrics**: Calculates Mean Time to Resolution (MTTR in hours) and automated auto-resolution effectiveness scores based on user feedback.
 - **Interactive Visualizations**: Powered by **Recharts** for real-time executive visibility.
+
+### 7. 🧪 Automated AI Evaluation & Evals Benchmarking (`evaluation_engine.py`)
+- **RAG Triad Reliability Metrics**: Automated scoring for Groundedness/Faithfulness (hallucination index), Context Relevance, and Answer Relevance.
+- **PII Guardrail Audit Precision**: Validates redaction accuracy and zero-data-leakage bounds across synthetic test cases.
+- **A/B Prompt Experimentation Matrix**: Live comparative benchmarking between Variant A (Direct RAG) and Variant B (ReAct Chain-of-Thought with Self-Reflection).
+- **Automated 5-Scenario Benchmark Runner**: On-demand test execution testing 5 canonical enterprise incidents (502 Outages, Okta MFA Lockouts, Stripe Card PII, Postgres Locks, and Frontend OOM crashes).
+
+### 8. 🌐 Distributed Real-Time Architecture & Redis Pub/Sub (`realtime.py`)
+- **Multi-Node Cluster Synchronization**: When scaling horizontally across multiple Uvicorn workers or Kubernetes pods, `ConnectionManager` publishes events via Redis Pub/Sub (`resolvai:realtime:events`) so all connected clients receive immediate updates.
+- **Resilient Fallback**: Automatically falls back to in-memory broadcasting if Redis is unavailable or unconfigured, preserving 100% functionality in single-node setups.
+
+### 9. 🗄️ Persistent Vector Store & `pgvector` Integration (`rag_engine.py`, `models.py`)
+- **Persistent Knowledge Runbooks**: Stores SOP runbooks, tag metadata, and 384-dimensional dense vectors in the `knowledge_articles` database table.
+- **Native PostgreSQL pgvector**: Supports native PostgreSQL vector operations via `init_extensions()` with automatic cold-start vector cache warming.
+
+### 10. 🛡️ Enterprise SOC-2 AI Governance & Cost Telemetry (`routers/analytics.py`, `ai_service.py`)
+- **Immutable AIAuditLog**: Tracks every AI operation with exact latency (ms), model used, prompt/completion token consumption, dollar cost estimations ($USD), and PII safety intercepts.
+- **Audit API**: Accessible to admins via `GET /api/analytics/ai-audit-logs` for cost visibility and compliance reporting.
+
+### 11. 🐳 1-Command Production Fleet (`docker-compose.yml`)
+- Provisions PostgreSQL 16 with pgvector, Redis 7 Alpine, FastAPI Python 3.11 backend, and Nginx Alpine frontend with a single command:
+  ```bash
+  docker compose up -d --build
+  ```
 
 ---
 
@@ -130,7 +156,7 @@ graph TD
     E2 --> F2[Check Real-Time SLA Countdown Badges: Breached / At Risk / On Track]
     F2 --> G2[Open Ticket Detail View]
     G2 --> H2[Inspect AI Triage: Category, Severity, Sentiment & Suggested Steps]
-    H2 --> I2[Click '✨ Generate AI Reply' for 1-Click Contextual Draft]
+    H2 --> I2[Click 'Generate AI Reply' for 1-Click Contextual Draft]
     I2 --> J2[Review, Edit & Send Response to Customer]
     J2 --> K2[Add Internal Staff Notes for Team Collaboration]
     K2 --> L2[Update Ticket Status to In Progress / Resolved / Closed]
@@ -140,7 +166,7 @@ graph TD
 1. **Account Provisioning**: Created by the System Admin in the Employee Directory.
 2. **Work Queue Inspection**: View incoming tickets assigned based on skill matching and current workload.
 3. **SLA Countdown & Urgency**: Monitor color-coded **SLA Badges** (`SLA Breached 🚨`, `SLA < 1h ⏱️`, `SLA On Track 💙`).
-4. **AI Smart Reply Assistant**: Click **"✨ Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
+4. **AI Smart Reply Assistant**: Click **"Generate AI Reply"** to generate an automated draft response powered by Groq LLaMA 3.3.
 5. **Customer Communication & Notes**: Publish replies, attach internal team notes, and manage ticket status.
 
 ---
@@ -322,12 +348,22 @@ All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓
 | `PATCH` | `/api/tickets/{id}/status` | 👩‍💻 Update ticket status (`New`, `Assigned`, `In Progress`, `Pending Info`, `Resolved`, `Closed`) |
 | `POST` | `/api/tickets/{id}/notes` | 👩‍💻 Add internal employee note to a ticket |
 | `POST` | `/api/tickets/{id}/replies` | 👤 Post reply — official replies restricted to admin or the assigned employee |
-| `POST` | `/api/tickets/{id}/generate-reply` | 👩‍💻 ✨ Generate AI draft reply using Groq LLM |
+| `POST` | `/api/tickets/{id}/generate-reply` | 👩‍💻 Generate AI draft reply using Groq LLM |
 | `GET` | `/api/tickets/{id}/timeline` | 👤 Fetch activity timeline events |
 | `POST` | `/api/tickets/{id}/feedback` | 👤 Submit user satisfaction feedback (`Helpful` / `Unhelpful`) |
 | `POST` | `/api/tickets/{id}/escalate` | 🛡️ Escalate ticket severity & trigger urgent Slack notification |
 | `POST` | `/api/tickets/check-escalations` | 🛡️ System timer check for overdue tickets |
 | `POST` | `/api/tickets/reset-seed` | 🛡️ 🔄 1-Click reset database back to initial seed dataset |
+
+### 📚 Knowledge Base & GenAI (`/api/knowledge`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/knowledge/articles` | 👤 List SOP runbooks and indexed vector knowledge articles |
+| `POST` | `/api/knowledge/articles` | 👩‍💻 Create, persist to DB, and index a new knowledge article |
+| `POST` | `/api/knowledge/query` | 👤 RAG semantic playground: Hybrid vector search + grounded answer |
+| `GET` | `/api/knowledge/incidents` | 👩‍💻 Real-time semantic clustering across active tickets for outages |
+| `GET` | `/api/knowledge/agent-trace/{id}` | 👩‍💻 Inspect autonomous ReAct agent loop diagnostic trace |
+| `POST` | `/api/knowledge/sanitize-pii` | 👤 Pre-flight PII redaction preview (Luhn verified) |
 
 ### ⚙️ System Settings (`/api/settings`)
 | Method | Endpoint | Description |
@@ -344,12 +380,15 @@ All endpoints require an `Authorization: Bearer <JWT>` header unless marked 🔓
 | `PUT` | `/api/employees/{id}` | 🛡️ Update employee details, skills, or availability |
 | `DELETE` | `/api/employees/{id}` | 🛡️ Deactivate employee |
 
-### 📊 Analytics (`/api/analytics`)
+### 📊 Analytics & Governance (`/api/analytics`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/analytics/overview` | 👩‍💻 Executive KPI stats (total tickets, auto-resolved %, SLA compliance, resolution time) |
 | `GET` | `/api/analytics/department-load` | 👩‍💻 Department ticket distribution for charts |
 | `GET` | `/api/analytics/top-categories` | 👩‍💻 Top 5 ticket category breakdown |
+| `GET` | `/api/analytics/ai-audit-logs` | 🛡️ SOC-2 immutable AI audit trail: Latency, token burn, cost ($USD), PII flags |
+| `GET` | `/api/analytics/ai-evaluation` | 👩‍💻 RAG Triad scores, MTTR reduction, and A/B prompt experiment summary |
+| `POST` | `/api/analytics/run-benchmark` | 👩‍💻 Execute live 5-scenario evaluation benchmark suite |
 
 ### 🔌 WebSockets (`/ws`)
 | Protocol | Endpoint | Description |
@@ -415,7 +454,7 @@ ai-QUERY/
 
 ## 🧪 Testing
 
-The backend includes a comprehensive automated test suite covering authentication, RBAC authorization, PII guardrails, RAG, and WebSocket dispatches across 28 test cases.
+The backend includes a comprehensive automated test suite covering authentication, RBAC authorization, PII guardrails, RAG, AI evaluation, distributed WebSocket state, and persistent vector caches across 33 test cases.
 
 To run tests:
 
@@ -431,14 +470,15 @@ pytest tests/ -v
 ```
 
 ```
-tests/test_auth_api.py ......................... [ 17%]
-tests/test_employee_dashboard.py ............... [ 28%]
-tests/test_genai_suite.py ...................... [ 53%]
-tests/test_rbac_security.py .................... [ 71%]
-tests/test_realtime.py ......................... [ 82%]
+tests/test_auth_api.py ......................... [ 18%]
+tests/test_employee_dashboard.py ............... [ 27%]
+tests/test_enterprise_suite.py ................. [ 36%]
+tests/test_genai_suite.py ...................... [ 60%]
+tests/test_rbac_security.py .................... [ 75%]
+tests/test_realtime.py ......................... [ 84%]
 tests/test_tickets_api.py ...................... [100%]
 
-============================= 28 passed in 1.60s ==============================
+============================= 33 passed in 2.44s ==============================
 ```
 
 ---

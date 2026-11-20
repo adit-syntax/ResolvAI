@@ -5,7 +5,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Sparkles, Loader2, CheckCircle2, AlertTriangle, ImageIcon, X, UploadCloud, ChevronDown, HelpCircle } from 'lucide-react';
+import { Send, Bot, Activity, Loader2, CheckCircle2, AlertTriangle, ImageIcon, X, UploadCloud, ChevronDown, HelpCircle } from 'lucide-react';
 import { ticketApi } from '../api.js';
 
 export default function TicketSubmit() {
@@ -135,7 +135,7 @@ export default function TicketSubmit() {
               </div>
             ) : (
               <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-primary-400" />
+                <Bot className="w-6 h-6 text-primary-400" />
               </div>
             )}
             <div>
@@ -149,7 +149,7 @@ export default function TicketSubmit() {
           {/* AI Analysis Card */}
           <div className="bg-surface-900/60 rounded-xl p-6 mb-6 border border-white/5">
             <h3 className="text-sm font-semibold text-primary-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" /> AI Analysis
+              <Activity className="w-4 h-4" /> Automated Triage Analysis
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>

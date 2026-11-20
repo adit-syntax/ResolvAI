@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  X, Settings, Sparkles, Bell, CheckCircle2, AlertCircle,
+  X, Settings, Cpu, Bell, CheckCircle2, AlertCircle,
   Eye, EyeOff, ExternalLink, Send, Loader2, Key, ShieldCheck, RefreshCw
 } from 'lucide-react';
 import { settingsApi } from '../api.js';
@@ -151,7 +151,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
-            <Sparkles className="w-4 h-4" /> AI Engine (Groq)
+            <Cpu className="w-4 h-4" /> AI Engine (Groq)
           </button>
           <button
             onClick={() => setActiveTab('slack')}
@@ -217,7 +217,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-4 h-4 text-amber-400" /> Offline Mode: Intelligent Rule Engine
+                            <Cpu className="w-4 h-4 text-amber-400" /> Offline Mode: Intelligent Rule Engine
                           </>
                         )}
                       </p>

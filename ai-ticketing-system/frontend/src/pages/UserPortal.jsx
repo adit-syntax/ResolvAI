@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  Send, Sparkles, Loader2, CheckCircle2, AlertTriangle,
+  Send, Loader2, CheckCircle2, AlertTriangle,
   ImageIcon, X, UploadCloud, ChevronDown, ChevronUp,
   HelpCircle, Mail, Clock, Users, MessageSquare,
   XCircle, ThumbsUp, ThumbsDown, Inbox, Search, Check,
@@ -468,7 +468,7 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
           {/* Suggested solution */}
           <div className="bg-[#22c55e]/5 rounded-xl p-6 border border-[#22c55e]/20 mb-6">
             <h3 className="text-sm font-semibold text-[#22c55e] mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" /> Suggested Solution
+              <Bot className="w-4 h-4 text-[#22c55e]" /> Suggested Solution
             </h3>
             <p className="text-sm text-neutral-300 whitespace-pre-line leading-relaxed">{aiSuggestionTicket.auto_response}</p>
           </div>
@@ -586,8 +586,8 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
             {activeTicket.ai_summary && (
               <div className="flex justify-center">
                 <div className="chat-bubble-system">
-                  <Sparkles className="w-3 h-3 text-[#22c55e] inline mr-1.5" />
-                  <span className="text-xs text-neutral-400">AI: {activeTicket.ai_summary}</span>
+                  <Bot className="w-3.5 h-3.5 text-[#22c55e] inline mr-1.5" />
+                  <span className="text-xs text-neutral-400">Triage: {activeTicket.ai_summary}</span>
                 </div>
               </div>
             )}
@@ -851,9 +851,9 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
                 id="submit-issue-btn"
               >
                 {submitting ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> AI Analyzing...</>
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing...</>
                 ) : (
-                  <><Sparkles className="w-5 h-5" /> Submit Query</>
+                  <><Send className="w-5 h-5" /> Submit Query</>
                 )}
               </button>
             </form>
@@ -1199,7 +1199,7 @@ function InlineMyTickets({ email, onNewIssue }) {
                   <h3 className="text-sm font-semibold text-white truncate mb-1">{ticket.title}</h3>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500">
                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{fmt(ticket.created_at)}</span>
-                    {ticket.estimated_resolution_time && <span className="flex items-center gap-1"><Sparkles className="w-3.5 h-3.5 text-[#22c55e]" />Est. {ticket.estimated_resolution_time}</span>}
+                    {ticket.estimated_resolution_time && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-[#22c55e]" />Est. {ticket.estimated_resolution_time}</span>}
                   </div>
                 </div>
                 {expandedId === ticket.id
@@ -1238,7 +1238,7 @@ function InlineMyTickets({ email, onNewIssue }) {
                   {ticket.auto_resolved && ticket.auto_response && (
                     <div className="bg-[#22c55e]/5 rounded-lg p-4 border border-[#22c55e]/20">
                       <p className="text-xs font-semibold text-[#22c55e] mb-2 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" /> AI Auto-Resolution
+                        <Bot className="w-3.5 h-3.5" /> Autonomous Resolution
                       </p>
                       <p className="text-sm text-neutral-300 whitespace-pre-wrap mb-4">{ticket.auto_response}</p>
                       <div className="flex items-center gap-3">

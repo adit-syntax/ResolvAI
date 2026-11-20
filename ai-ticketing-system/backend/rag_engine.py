@@ -268,12 +268,60 @@ class HybridRAGEngine:
             else:
                 self.articles.append(art)
 
-            # Compute and store dense embedding vector
-            full_text = f"{art['title']}\nCategory: {art.get('category', '')}\nTags: {' '.join(art.get('tags', []))}\n{art['content']}"
-            self.dense_embeddings[art["id"]] = DenseEmbedder.embed_text(full_text)
+            # Compute and store dense embedding vector if not already present
+            if art["id"] not in self.dense_embeddings:
+                full_text = f"{art['title']}\nCategory: {art.get('category', '')}\nTags: {' '.join(art.get('tags', []))}\n{art['content']}"
+                self.dense_embeddings[art["id"]] = DenseEmbedder.embed_text(full_text)
 
         # Re-index BM25 sparse index
         self.bm25_index.fit(self.articles)
+
+    def sync_with_db(self, db):
+        """
+        Synchronize in-memory vector index with persistent DB storage.
+        Seeds articles into DB if empty, or loads existing DB articles into index.
+        """
+        import json
+        try:
+            from models import KnowledgeArticle
+            existing = db.query(KnowledgeArticle).filter(KnowledgeArticle.is_active == True).all()
+            if not existing:
+                for art in SEED_KNOWLEDGE_ARTICLES:
+                    tags_str = ",".join(art.get("tags", []))
+                    full_text = f"{art['title']}\nCategory: {art.get('category', '')}\nTags: {tags_str}\n{art['content']}"
+                    vec = DenseEmbedder.embed_text(full_text)
+                    rec = KnowledgeArticle(
+                        id=art["id"],
+                        title=art["title"],
+                        category=art["category"],
+                        tags=tags_str,
+                        content=art["content"],
+                        embedding_json=json.dumps(vec),
+                        is_active=True,
+                    )
+                    db.add(rec)
+                db.commit()
+                existing = db.query(KnowledgeArticle).filter(KnowledgeArticle.is_active == True).all()
+
+            db_articles = []
+            for row in existing:
+                tags = [t.strip() for t in row.tags.split(",") if t.strip()] if row.tags else []
+                art_dict = {
+                    "id": row.id,
+                    "title": row.title,
+                    "category": row.category,
+                    "content": row.content,
+                    "tags": tags,
+                }
+                db_articles.append(art_dict)
+                if row.embedding_json:
+                    try:
+                        self.dense_embeddings[row.id] = json.loads(row.embedding_json)
+                    except Exception:
+                        pass
+            self.ingest_articles(db_articles)
+        except Exception as e:
+            print(f"[RAG Engine] DB sync notice: {e}")
 
     def search(
         self,

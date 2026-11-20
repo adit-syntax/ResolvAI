@@ -14,7 +14,7 @@ import React, { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import ResolvAiLogo from '../components/ResolvAiLogo.jsx';
 import {
-  Mail, Lock, Eye, EyeOff, Sparkles,
+  Mail, Lock, Eye, EyeOff,
   User, ShieldCheck, AlertTriangle, Zap, UserPlus, LogIn, Info, Headphones,
   Loader2
 } from 'lucide-react';
@@ -22,9 +22,11 @@ import { authApi, setAuthToken } from '../api.js';
 
 // ── Demo credentials (sent to real API with bcrypt-hashed passwords in DB) ────
 const DEMO_CREDENTIALS = {
-  user:     { email: 'user@gmail.com',      password: 'user123',     role: 'user'     },
-  admin:    { email: 'admin@gmail.com',     password: 'admin123',    role: 'admin'    },
-  employee: { email: 'employee@company.com',password: 'employee123', role: 'employee' },
+  customer: { email: 'customer@resolvai.com', password: 'customer123', role: 'user' },
+  user:     { email: 'customer@resolvai.com', password: 'customer123', role: 'user' },
+  staff:    { email: 'staff@resolvai.com',    password: 'staff123',    role: 'employee' },
+  employee: { email: 'staff@resolvai.com',    password: 'staff123',    role: 'employee' },
+  admin:    { email: 'admin@resolvai.com',    password: 'admin123',    role: 'admin' },
 };
 
 // Google icon
@@ -165,11 +167,8 @@ export default function LoginPage({ onLogin }) {
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
 
-      {/* Background glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#22c55e]/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/4 rounded-full blur-[100px]" />
-      </div>
+      {/* Background */}
+      <div className="absolute inset-0 pointer-events-none bg-[#09090b]" />
 
       <div className="w-full max-w-md relative z-10">
 
@@ -301,7 +300,7 @@ export default function LoginPage({ onLogin }) {
             /* ── REGISTER FORM (End-Users only) ── */
             <form onSubmit={handleRegister} className="space-y-3.5">
               <div className="flex items-start gap-2 bg-[#22c55e]/8 border border-[#22c55e]/20 rounded-xl px-3 py-2.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0 mt-0.5" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] text-[#22c55e]/80 leading-relaxed">
                   Registration is for <span className="font-semibold text-[#22c55e]">Support Users</span> (customers) only.
                   Employees &amp; Admins are added by the system administrator.
@@ -344,7 +343,7 @@ export default function LoginPage({ onLogin }) {
 
               <button
                 type="submit" disabled={regLoading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 shadow-lg shadow-[#22c55e]/20 mt-2"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white hover:bg-neutral-200 text-black font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 mt-2"
               >
                 {regLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating Account...</> : 'Create My Account'}
               </button>
@@ -354,52 +353,44 @@ export default function LoginPage({ onLogin }) {
           {/* Quick Demo Access */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-[#222222]" />
-            <span className="text-xs text-neutral-600 font-medium flex items-center gap-1.5">
-              <Zap className="w-3 h-3 text-[#22c55e]" /> Quick Demo Access
-            </span>
+            <span className="text-xs text-neutral-500 font-medium">Demo Access</span>
             <div className="flex-1 h-px bg-[#222222]" />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             <button
               id="demo-user-btn"
-              onClick={() => quickLogin('user')} disabled={loading}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-[#22c55e]/40 hover:bg-[#22c55e]/5 transition-all group active:scale-[0.97] disabled:opacity-60"
+              onClick={() => quickLogin('customer')} disabled={loading}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-[#27272a] bg-[#141416] hover:border-neutral-500 hover:bg-[#1c1c1f] transition-all text-center disabled:opacity-60"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center group-hover:bg-[#22c55e]/20 transition-colors">
-                <User className="w-4 h-4 text-[#22c55e]" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs font-semibold text-white">User</p>
-                <p className="text-[9px] text-neutral-600 mt-0.5">Support Portal</p>
+              <User className="w-4 h-4 text-neutral-300" />
+              <div>
+                <p className="text-xs font-medium text-white">Customer</p>
+                <p className="text-[10px] font-mono text-neutral-500 truncate max-w-[85px]">customer@resolvai.com</p>
               </div>
             </button>
 
             <button
               id="demo-employee-btn"
-              onClick={() => quickLogin('employee')} disabled={loading}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group active:scale-[0.97] disabled:opacity-60"
+              onClick={() => quickLogin('staff')} disabled={loading}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-[#27272a] bg-[#141416] hover:border-neutral-500 hover:bg-[#1c1c1f] transition-all text-center disabled:opacity-60"
             >
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
-                <Headphones className="w-4 h-4 text-purple-400" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs font-semibold text-white">Employee</p>
-                <p className="text-[9px] text-neutral-500 mt-0.5">My Dashboard</p>
+              <Headphones className="w-4 h-4 text-neutral-300" />
+              <div>
+                <p className="text-xs font-medium text-white">Staff</p>
+                <p className="text-[10px] font-mono text-neutral-500 truncate max-w-[85px]">staff@resolvai.com</p>
               </div>
             </button>
 
             <button
               id="demo-admin-btn"
               onClick={() => quickLogin('admin')} disabled={loading}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group active:scale-[0.97] disabled:opacity-60"
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-[#27272a] bg-[#141416] hover:border-neutral-500 hover:bg-[#1c1c1f] transition-all text-center disabled:opacity-60"
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                <ShieldCheck className="w-4 h-4 text-blue-400" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs font-semibold text-white">Admin</p>
-                <p className="text-[9px] text-neutral-600 mt-0.5">Dashboard</p>
+              <ShieldCheck className="w-4 h-4 text-neutral-300" />
+              <div>
+                <p className="text-xs font-medium text-white">Admin</p>
+                <p className="text-[10px] font-mono text-neutral-500 truncate max-w-[85px]">admin@resolvai.com</p>
               </div>
             </button>
           </div>

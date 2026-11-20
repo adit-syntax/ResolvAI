@@ -244,13 +244,68 @@ async def analyze_with_claude(title: str, description: str, user_email: str) -> 
     return None
 
 
-async def analyze_ticket(title: str, description: str, user_email: str) -> AIAnalysisResult:
+def record_ai_audit(
+    db,
+    ticket_id: Optional[int],
+    operation: str,
+    model_used: str,
+    latency_ms: float,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    pii_detected: bool = False,
+    pii_count: int = 0,
+    rag_citation: Optional[str] = None,
+    confidence_score: Optional[float] = None,
+    decision_outcome: Optional[str] = None,
+):
+    """Persist an immutable AI operation audit record for SOC-2 & LLM cost governance."""
+    if not db:
+        return
+    try:
+        from models import AIAuditLog
+        # Cost estimates per 1k tokens: Groq LLaMA 70B: ~$0.0007 / 1k, Claude Haiku: ~$0.00125 / 1k
+        cost_rate = 0.0000007 if "llama" in model_used.lower() else (0.00000125 if "claude" in model_used.lower() else 0.0)
+        total_tokens = prompt_tokens + completion_tokens
+        cost_usd = round(total_tokens * cost_rate, 6)
+
+        entry = AIAuditLog(
+            ticket_id=ticket_id,
+            operation=operation,
+            model_used=model_used,
+            latency_ms=round(latency_ms, 2),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            estimated_cost_usd=cost_usd,
+            pii_detected=pii_detected,
+            pii_entities_count=pii_count,
+            rag_citation=rag_citation,
+            confidence_score=confidence_score,
+            decision_outcome=decision_outcome,
+        )
+        db.add(entry)
+        db.flush()
+    except Exception as e:
+        print(f"[AI Audit] Telemetry notice: {e}")
+
+
+async def analyze_ticket(
+    title: str,
+    description: str,
+    user_email: str,
+    db=None,
+    ticket_id: Optional[int] = None
+) -> AIAnalysisResult:
     """
     Main analysis function.
     1. Runs Enterprise PII Guardrail to sanitize sensitive tokens/passwords.
     2. Uses RAG vector search to find matching enterprise runbooks.
     3. Analyzes via Groq / Claude with grounded context, falling back to mock engine.
+    4. Records SOC-2 compliant AIAuditLog telemetry.
     """
+    import time
+    start_time = time.time()
+
     from guardrails import PIISanitizer
     from rag_engine import rag_engine
 
@@ -262,26 +317,51 @@ async def analyze_ticket(title: str, description: str, user_email: str) -> AIAna
     # Step 2: RAG Context Retrieval
     rag_matches = rag_engine.search(f"{title} {sanitized_desc}", top_k=2)
     rag_context = ""
+    top_citation = None
     if rag_matches:
         top_m = rag_matches[0]
-        rag_context = f"\nRelevant Knowledge Base SOP [{top_m['id']} - {top_m['title']}]:\n{top_m['excerpt']}\n"
+        top_citation = f"{top_m['id']} - {top_m['title']}"
+        rag_context = f"\nRelevant Knowledge Base SOP [{top_citation}]:\n{top_m['excerpt']}\n"
 
-    # Step 3: LLM Analysis
+    # Step 3: LLM Analysis with fallback
+    result = None
+    model_used = "deterministic-rules"
+
     # Try Groq first
     result = await analyze_with_groq(title, sanitized_desc + rag_context, user_email)
     if result:
+        model_used = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         print("[AI Service] Analysis completed via Groq (RAG Grounded)")
-        return result
+    else:
+        # Try Claude
+        result = await analyze_with_claude(title, sanitized_desc + rag_context, user_email)
+        if result:
+            model_used = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+            print("[AI Service] Analysis completed via Claude (RAG Grounded)")
+        else:
+            # Fallback to mock
+            print("[AI Service] Using mock analysis (no API keys configured)")
+            result = mock_analyze_ticket(title, sanitized_desc, user_email)
 
-    # Try Claude
-    result = await analyze_with_claude(title, sanitized_desc + rag_context, user_email)
-    if result:
-        print("[AI Service] Analysis completed via Claude (RAG Grounded)")
-        return result
+    latency_ms = (time.time() - start_time) * 1000
 
-    # Fallback to mock
-    print("[AI Service] Using mock analysis (no API keys configured)")
-    return mock_analyze_ticket(title, sanitized_desc, user_email)
+    # Step 4: Record Audit Log
+    record_ai_audit(
+        db=db,
+        ticket_id=ticket_id,
+        operation="triage",
+        model_used=model_used,
+        latency_ms=latency_ms,
+        prompt_tokens=len((title + " " + sanitized_desc).split()) * 2,
+        completion_tokens=len(result.ai_summary.split()) * 2,
+        pii_detected=bool(pii_entities),
+        pii_count=len(pii_entities),
+        rag_citation=top_citation,
+        confidence_score=result.confidence_score,
+        decision_outcome=result.recommended_resolution_path,
+    )
+
+    return result
 
 
 async def generate_ai_reply_draft(title: str, description: str, category: str, severity: str, replies_summary: str = "") -> str:
