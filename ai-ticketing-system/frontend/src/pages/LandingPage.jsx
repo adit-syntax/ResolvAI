@@ -240,7 +240,7 @@ export default function LandingPage({ onLogin }) {
       <div className="absolute inset-0 bg-grid-dots pointer-events-none opacity-20 -z-10" />
 
       {/* ─── STICKY HEADER ─── */}
-      <header className="sticky top-0 z-40 bg-[#09090b]/90 backdrop-blur-md border-b border-white/[0.08]">
+      <header className="sticky top-0 z-40 bg-[#0e151f]/95 backdrop-blur-md border-b border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           
           {/* Logo */}
