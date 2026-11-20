@@ -151,16 +151,31 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
   //  Data Fetching
   // ──────────────────────────────────────────────────────────
 
-  const fetchTickets = useCallback(async (em) => {
+  const fetchTickets = useCallback(async (em, targetTicketId = null) => {
     if (!em) return;
     setLoading(true);
     try {
       const data = await ticketApi.listByEmail(em);
       setTickets(data);
 
-      // Find active ticket
-      const active = data.find(t => ACTIVE_STATUSES.includes(t.status));
-      setActiveTicket(active || null);
+      if (targetTicketId) {
+        const target = data.find(t => t.id === targetTicketId);
+        if (target) {
+          setActiveTicket(target);
+          return;
+        }
+      }
+
+      // If user is already viewing a specific ticket, keep it fresh
+      setActiveTicket(current => {
+        if (current) {
+          const fresh = data.find(t => t.id === current.id);
+          return fresh || current;
+        }
+        // Initial load: pick most recent active ticket if available
+        const active = data.find(t => ACTIVE_STATUSES.includes(t.status));
+        return active || null;
+      });
     } catch (err) {
       console.error('Failed to fetch tickets:', err);
     } finally {
@@ -172,17 +187,11 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
     if (!activeTicket) return;
     try {
       const updated = await ticketApi.get(activeTicket.id);
-      // Merge assignee info
       setActiveTicket(updated);
 
-      // Also refresh full list
+      // Also refresh full list so switcher stays up to date
       const data = await ticketApi.listByEmail(email);
       setTickets(data);
-
-      // If ticket was resolved/closed by agent, switch back
-      if (!ACTIVE_STATUSES.includes(updated.status)) {
-        setActiveTicket(null);
-      }
     } catch (err) {
       console.error('Refresh failed:', err);
     }
@@ -211,20 +220,31 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
     }
   }, [activeTicket?.replies]);
 
-  // Sync route navigation (Support Portal vs My Tickets)
+  // Sync route navigation (Support Portal vs My Tickets & deep-linked ticketId)
   useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const qTicketId = search.get('ticketId') ? parseInt(search.get('ticketId'), 10) : null;
+
     if (location.pathname === '/my-tickets') {
       setActiveTab('my-tickets');
       setActiveTicket(null);
       setAiSuggestionTicket(null);
     } else if (location.pathname === '/') {
       setActiveTab('new-issue');
+      if (qTicketId && tickets.length > 0) {
+        const found = tickets.find(x => x.id === qTicketId);
+        if (found) {
+          setActiveTicket(found);
+          setAiSuggestionTicket(null);
+          return;
+        }
+      }
       if (location.state?.reset) {
         setActiveTicket(null);
         setAiSuggestionTicket(null);
       }
     }
-  }, [location]);
+  }, [location, tickets]);
 
   // ──────────────────────────────────────────────────────────
   //  Handlers
@@ -297,13 +317,15 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
       });
 
       if (ticket.auto_resolved) {
-        // Show AI suggestion view
+        // Show AI suggestion view for this unique ticket
         setAiSuggestionTicket(ticket);
+        setActiveTicket(null);
       } else {
-        // Go directly to chat
+        // Go directly to chat for this newly created unique ticket
         setActiveTicket(ticket);
-        await fetchTickets(email);
+        setAiSuggestionTicket(null);
       }
+      await fetchTickets(email, ticket.id);
 
       // Reset form
       setDescription('');
@@ -401,8 +423,15 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
     if (!activeTicket) return;
     try {
       await ticketApi.updateStatus(activeTicket.id, { status: 'Closed', actor: email });
-      setActiveTicket(null);
-      await fetchTickets(email);
+      const data = await ticketApi.listByEmail(email);
+      setTickets(data);
+      const nextActive = data.find(t => t.id !== activeTicket.id && ACTIVE_STATUSES.includes(t.status));
+      if (nextActive) {
+        setActiveTicket(nextActive);
+      } else {
+        setActiveTicket(null);
+        setActiveTab('new-issue');
+      }
     } catch (err) {
       alert(err.message);
     }
@@ -427,18 +456,47 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
     return (
       <div className="animate-fade-in max-w-3xl mx-auto">
         {/* Header */}
-        <PortalHeader email={email} onLogout={handleLogout} />
+        <PortalHeader
+          email={email}
+          onLogout={handleLogout}
+          ticketCount={tickets.length}
+          onNewTicket={() => { setAiSuggestionTicket(null); setActiveTicket(null); setActiveTab('new-issue'); }}
+        />
 
-        <div className="glass-card p-8 mt-6">
+        {/* Ticket Switcher across all user tickets */}
+        <div className="mt-6">
+          <TicketSwitcherBar
+            tickets={tickets}
+            activeTicketId={aiSuggestionTicket.id}
+            onSelectTicket={(t) => { setActiveTicket(t); setAiSuggestionTicket(null); }}
+            onNewTicket={() => { setAiSuggestionTicket(null); setActiveTicket(null); setActiveTab('new-issue'); }}
+          />
+        </div>
+
+        <div className="glass-card p-8">
           {/* Title */}
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center">
-              <Bot className="w-6 h-6 text-[#22c55e]" />
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center">
+                <Bot className="w-6 h-6 text-[#22c55e]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-white">AI Suggested Solution</h2>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Ticket #{aiSuggestionTicket.id}
+                  </span>
+                </div>
+                <p className="text-sm text-neutral-400">Autonomous resolution for Ticket #{aiSuggestionTicket.id}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">AI Suggested Solution</h2>
-              <p className="text-sm text-neutral-400">Our AI found a possible solution for you</p>
-            </div>
+            <button
+              onClick={() => { setAiSuggestionTicket(null); setActiveTicket(null); setActiveTab('new-issue'); }}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-neutral-300 text-xs font-semibold hover:bg-white/10 transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" />
+              + New Ticket
+            </button>
           </div>
 
           {/* AI Analysis summary */}
@@ -511,6 +569,7 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
           expandedHistoryId={expandedHistoryId}
           setExpandedHistoryId={setExpandedHistoryId}
           handleAutoResponseFeedback={handleAutoResponseFeedback}
+          onSelectTicket={(ticket) => { setActiveTicket(ticket); setAiSuggestionTicket(null); }}
         />
       </div>
     );
@@ -527,10 +586,25 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
     return (
       <div className="animate-fade-in max-w-3xl mx-auto">
         {/* Header */}
-        <PortalHeader email={email} onLogout={handleLogout} />
+        <PortalHeader
+          email={email}
+          onLogout={handleLogout}
+          ticketCount={tickets.length}
+          onNewTicket={() => { setActiveTicket(null); setAiSuggestionTicket(null); setActiveTab('new-issue'); }}
+        />
+
+        {/* Ticket Switcher across all user tickets */}
+        <div className="mt-6">
+          <TicketSwitcherBar
+            tickets={tickets}
+            activeTicketId={activeTicket.id}
+            onSelectTicket={(t) => { setActiveTicket(t); setAiSuggestionTicket(null); }}
+            onNewTicket={() => { setActiveTicket(null); setAiSuggestionTicket(null); setActiveTab('new-issue'); }}
+          />
+        </div>
 
         {/* Chat Card */}
-        <div className="glass-card mt-6 flex flex-col" style={{ height: 'calc(100vh - 220px)', minHeight: '500px' }}>
+        <div className="glass-card flex flex-col" style={{ height: 'calc(100vh - 270px)', minHeight: '500px' }}>
 
           {/* Chat header */}
           <div className="p-4 border-b border-[#2a2a2a] flex items-center justify-between flex-shrink-0">
@@ -540,35 +614,48 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-white">Ticket #{activeTicket.id}</span>
+                  <span className="text-sm font-semibold text-white font-mono">Ticket #{activeTicket.id}</span>
                   <span className={getStatusBadge(activeTicket.status)}>{activeTicket.status}</span>
                   {activeTicket.severity && <span className={getSeverityBadge(activeTicket.severity)}>{activeTicket.severity}</span>}
                 </div>
                 <p className="text-xs text-neutral-500 truncate mt-0.5">
                   {activeTicket.assignee_name ? `Assigned to ${activeTicket.assignee_name}` : 'Awaiting assignment'}
                   {activeTicket.category && ` · ${activeTicket.category}`}
+                  <span className="text-neutral-600 mx-1.5">•</span>
+                  <span className="text-neutral-400 font-mono text-[11px]">ID: {activeTicket.id}</span>
                 </p>
               </div>
             </div>
-            {!isClosed && (
+
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
-                onClick={handleCloseTicket}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-all flex-shrink-0"
-                id="close-ticket-btn"
+                onClick={() => { setActiveTicket(null); setAiSuggestionTicket(null); setActiveTab('new-issue'); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#22c55e]/10 border border-[#22c55e]/30 text-[#22c55e] text-xs font-semibold hover:bg-[#22c55e]/20 transition-all flex-shrink-0"
+                title="Create another ticket with a unique ID"
               >
-                <XCircle className="w-3.5 h-3.5" />
-                Close Ticket
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">New Ticket</span>
               </button>
-            )}
-            {isClosed && (
-              <button
-                onClick={() => { setActiveTicket(null); fetchTickets(email); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-[#2a2a2a] text-neutral-300 text-xs font-semibold hover:bg-white/10 transition-all flex-shrink-0"
-              >
-                <ArrowRight className="w-3.5 h-3.5" />
-                New Issue
-              </button>
-            )}
+              {!isClosed && (
+                <button
+                  onClick={handleCloseTicket}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-all flex-shrink-0"
+                  id="close-ticket-btn"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Close Ticket</span>
+                </button>
+              )}
+              {isClosed && (
+                <button
+                  onClick={() => { setActiveTicket(null); setAiSuggestionTicket(null); setActiveTab('new-issue'); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-[#2a2a2a] text-neutral-300 text-xs font-semibold hover:bg-white/10 transition-all flex-shrink-0"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  New Issue
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Chat messages */}
@@ -717,10 +804,27 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
   return (
     <div className="animate-fade-in max-w-3xl mx-auto">
       {/* Header */}
-      <PortalHeader email={email} onLogout={handleLogout} />
+      <PortalHeader
+        email={email}
+        onLogout={handleLogout}
+        ticketCount={tickets.length}
+        onNewTicket={() => { setActiveTicket(null); setAiSuggestionTicket(null); setActiveTab('new-issue'); }}
+      />
+
+      {/* Ticket Switcher Bar across all user tickets */}
+      {tickets.length > 0 && (
+        <div className="mt-6">
+          <TicketSwitcherBar
+            tickets={tickets}
+            activeTicketId={null}
+            onSelectTicket={(t) => { setActiveTicket(t); setAiSuggestionTicket(null); }}
+            onNewTicket={() => { setActiveTicket(null); setAiSuggestionTicket(null); setActiveTab('new-issue'); }}
+          />
+        </div>
+      )}
 
       {/* Tab Bar */}
-      <div className="flex gap-1 mt-6 mb-6 bg-[#171717] border border-[#2a2a2a] rounded-xl p-1">
+      <div className={`flex gap-1 ${tickets.length > 0 ? 'mt-2' : 'mt-6'} mb-6 bg-[#171717] border border-[#2a2a2a] rounded-xl p-1`}>
         <button
           onClick={() => setActiveTab('new-issue')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-150 ${
@@ -758,11 +862,34 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
         </div>
       ) : activeTab === 'my-tickets' ? (
         /* ── My Tickets Tab ── */
-        <InlineMyTickets email={email} onNewIssue={() => setActiveTab('new-issue')} />
+        <InlineMyTickets
+          email={email}
+          onNewIssue={() => { setActiveTicket(null); setAiSuggestionTicket(null); setActiveTab('new-issue'); }}
+          onSelectTicket={(t) => { setActiveTicket(t); setAiSuggestionTicket(null); }}
+        />
       ) : (
         <>
           {/* New Issue Form */}
           <div className="mt-6">
+            {/* Informative banner for multi-ticket accounts */}
+            {tickets.length > 0 && (
+              <div className="glass-card p-3.5 mb-5 border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="text-neutral-300">
+                    You have <strong className="text-white">{tickets.length}</strong> ticket{tickets.length > 1 ? 's' : ''} on record. Submitting this form creates a <strong>new separate ticket with a unique Ticket ID</strong>.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('my-tickets')}
+                  className="text-xs text-emerald-400 hover:underline font-mono shrink-0"
+                >
+                  View All ({tickets.length}) →
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 mb-5">
               <div className="w-9 h-9 rounded-xl bg-[#22c55e]/10 border border-[#22c55e]/20 flex items-center justify-center">
                 <Send className="w-4 h-4 text-[#22c55e]" />
@@ -924,28 +1051,105 @@ export default function UserPortal({ userEmail, onLogout, onUpdateEmail }) {
 //  Sub-components
 // ────────────────────────────────────────────────────────────
 
-function PortalHeader({ email, onLogout }) {
+function TicketSwitcherBar({ tickets, activeTicketId, onSelectTicket, onNewTicket }) {
+  if (!tickets || tickets.length === 0) return null;
+
+  return (
+    <div className="glass-card p-3 mb-5 border border-white/10 bg-[#121214] rounded-2xl shadow-lg">
+      <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-2 shrink-0 pl-1">
+          <Hash className="w-4 h-4 text-[#22c55e]" />
+          <span className="text-xs font-mono uppercase tracking-wider text-neutral-300 font-semibold">
+            Your Tickets ({tickets.length}):
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto py-0.5">
+          {tickets.map(t => {
+            const isSelected = activeTicketId === t.id;
+            const isOpen = ['New', 'Assigned', 'In Progress', 'Pending Info'].includes(t.status);
+            return (
+              <button
+                key={t.id}
+                onClick={() => onSelectTicket(t)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-2 shrink-0 border ${
+                  isSelected
+                    ? 'bg-[#22c55e]/20 border-[#22c55e]/50 text-[#22c55e] font-bold shadow-sm'
+                    : 'bg-[#18181c] border-white/10 text-neutral-300 hover:text-white hover:border-neutral-600'
+                }`}
+                title={`Ticket #${t.id}: ${t.title || t.category || 'Support Request'}`}
+              >
+                <span className="font-bold text-white">#{t.id}</span>
+                <span className="text-[11px] text-neutral-400 max-w-[120px] truncate hidden sm:inline">
+                  {t.title || t.category}
+                </span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-sans uppercase font-medium ${
+                  isOpen ? 'bg-emerald-500/15 text-emerald-400' : 'bg-neutral-800 text-neutral-400'
+                }`}>
+                  {t.status}
+                </span>
+              </button>
+            );
+          })}
+
+          <button
+            onClick={onNewTicket}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 border border-dashed ${
+              !activeTicketId
+                ? 'bg-[#22c55e]/15 border-[#22c55e]/40 text-[#22c55e] font-bold'
+                : 'bg-white/5 border-white/20 text-neutral-300 hover:text-white hover:border-white/40'
+            }`}
+            title="Create another ticket with a new unique Ticket ID"
+          >
+            <Send className="w-3 h-3 text-[#22c55e]" />
+            <span>+ New Ticket</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PortalHeader({ email, onLogout, ticketCount = 0, onNewTicket }) {
   return (
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-white">User Portal</h1>
-        <p className="text-sm text-neutral-500 flex items-center gap-1.5 mt-0.5">
-          <Mail className="w-3.5 h-3.5" /> {email}
-        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <p className="text-sm text-neutral-500 flex items-center gap-1.5">
+            <Mail className="w-3.5 h-3.5" /> {email}
+          </p>
+          {ticketCount > 0 && (
+            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/5 text-neutral-400 border border-white/10">
+              {ticketCount} {ticketCount === 1 ? 'ticket' : 'tickets'} on record
+            </span>
+          )}
+        </div>
       </div>
-      <button
-        onClick={onLogout}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-[#2a2a2a] text-neutral-400 text-xs font-medium hover:bg-white/10 hover:text-white transition-all"
-      >
-        <LogOut className="w-3.5 h-3.5" />
-        Switch User
-      </button>
+      <div className="flex items-center gap-2">
+        {onNewTicket && (
+          <button
+            onClick={onNewTicket}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-all"
+          >
+            <Send className="w-3.5 h-3.5" />
+            New Ticket
+          </button>
+        )}
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-[#2a2a2a] text-neutral-400 text-xs font-medium hover:bg-white/10 hover:text-white transition-all"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Switch User
+        </button>
+      </div>
     </div>
   );
 }
 
 
-function PreviousTickets({ tickets, showHistory, setShowHistory, expandedHistoryId, setExpandedHistoryId, handleAutoResponseFeedback }) {
+function PreviousTickets({ tickets, showHistory, setShowHistory, expandedHistoryId, setExpandedHistoryId, handleAutoResponseFeedback, onSelectTicket }) {
   if (tickets.length === 0) return null;
 
   return (
@@ -982,7 +1186,22 @@ function PreviousTickets({ tickets, showHistory, setShowHistory, expandedHistory
                     {ticket.estimated_resolution_time && <span>Est. {ticket.estimated_resolution_time}</span>}
                   </div>
                 </div>
-                {expandedHistoryId === ticket.id ? <ChevronUp className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" /> : <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" />}
+                <div className="flex items-center gap-2 shrink-0">
+                  {onSelectTicket && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectTicket(ticket);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/15 text-xs text-neutral-300 font-medium transition-colors flex items-center gap-1"
+                      title={`Open Ticket #${ticket.id}`}
+                    >
+                      <MessageSquare className="w-3 h-3 text-emerald-400" />
+                      View #{ticket.id}
+                    </button>
+                  )}
+                  {expandedHistoryId === ticket.id ? <ChevronUp className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" /> : <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" />}
+                </div>
               </div>
 
               {/* Expanded */}
@@ -1065,7 +1284,7 @@ function PreviousTickets({ tickets, showHistory, setShowHistory, expandedHistory
 //  InlineMyTickets — My Tickets tab rendered inside UserPortal
 // ────────────────────────────────────────────────────────────
 
-function InlineMyTickets({ email, onNewIssue }) {
+function InlineMyTickets({ email, onNewIssue, onSelectTicket }) {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
@@ -1163,6 +1382,21 @@ function InlineMyTickets({ email, onNewIssue }) {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {/* Top Action Header */}
+      <div className="flex items-center justify-between pb-1">
+        <div>
+          <h3 className="text-base font-bold text-white">Your Ticket History</h3>
+          <p className="text-xs text-neutral-400">Manage all concurrent and previous tickets under this account.</p>
+        </div>
+        <button
+          onClick={onNewIssue}
+          className="px-3.5 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+        >
+          <Send className="w-3.5 h-3.5" />
+          + Submit New Ticket
+        </button>
+      </div>
+
       {/* Stats */}
       {tickets.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1202,10 +1436,25 @@ function InlineMyTickets({ email, onNewIssue }) {
                     {ticket.estimated_resolution_time && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-[#22c55e]" />Est. {ticket.estimated_resolution_time}</span>}
                   </div>
                 </div>
-                {expandedId === ticket.id
-                  ? <ChevronUp className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" />
-                  : <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" />
-                }
+                <div className="flex items-center gap-2 shrink-0">
+                  {onSelectTicket && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectTicket(ticket);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                      title={`Open full chat and updates for Ticket #${ticket.id}`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Open Chat
+                    </button>
+                  )}
+                  {expandedId === ticket.id
+                    ? <ChevronUp className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" />
+                    : <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-1" />
+                  }
+                </div>
               </div>
 
               {/* Expanded body */}

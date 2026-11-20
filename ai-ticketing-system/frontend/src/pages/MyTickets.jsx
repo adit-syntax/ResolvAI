@@ -201,7 +201,20 @@ export default function MyTickets() {
                     <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-primary-400" /> Est. {ticket.estimated_resolution_time || 'N/A'}</span>
                   </div>
                 </div>
-                {expandedId === ticket.id ? <ChevronUp className="w-6 h-6 text-gray-500" /> : <ChevronDown className="w-6 h-6 text-gray-400" />}
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/?ticketId=${ticket.id}`);
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                    title={`Open live conversation for Ticket #${ticket.id}`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Open Chat
+                  </button>
+                  {expandedId === ticket.id ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                </div>
               </div>
 
               {/* Expanded Body */}
